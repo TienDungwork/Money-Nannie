@@ -3,15 +3,17 @@
 import { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { useTransactions, useCategories } from '@/hooks/useStorage';
-import { BalanceCard } from '@/components/BalanceCard';
+import { EnhancedBalanceCard } from '@/components/EnhancedBalanceCard';
 import { TransactionItem } from '@/components/TransactionItem';
 import { TransactionModal } from '@/components/TransactionModal';
 import { StatsPage } from '@/components/StatsPage';
+import { BudgetPage } from '@/components/BudgetPage';
+import { ExpenseChart } from '@/components/ExpenseChart';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { groupTransactionsByDate } from '@/lib/utils';
-import { Home, BarChart3, History } from 'lucide-react';
+import { Home, BarChart3, History, Target } from 'lucide-react';
 
-type TabType = 'home' | 'transactions' | 'stats';
+type TabType = 'home' | 'transactions' | 'stats' | 'budget';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -80,6 +82,7 @@ export default function HomePage() {
             {activeTab === 'home' && 'Tổng quan'}
             {activeTab === 'transactions' && 'Giao dịch'}
             {activeTab === 'stats' && 'Thống kê'}
+            {activeTab === 'budget' && 'Ngân sách'}
           </h1>
         </div>
       </div>
@@ -88,7 +91,13 @@ export default function HomePage() {
       <div className="flex-1">
         {activeTab === 'home' && (
           <div className="p-4 space-y-6">
-            <BalanceCard transactions={transactions} />
+            <EnhancedBalanceCard transactions={transactions} />
+            
+            {/* Expense Chart */}
+            <div className="bg-white rounded-xl shadow-sm p-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Biểu đồ chi tiêu 7 ngày</h3>
+              <ExpenseChart transactions={transactions} />
+            </div>
             
             <div>
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Giao dịch gần đây</h2>
@@ -140,6 +149,8 @@ export default function HomePage() {
         )}
 
         {activeTab === 'stats' && <StatsPage transactions={transactions} />}
+        
+        {activeTab === 'budget' && <BudgetPage transactions={transactions} />}
       </div>
 
       {/* Bottom Navigation */}
@@ -159,6 +170,11 @@ export default function HomePage() {
             tab="stats"
             icon={<BarChart3 size={20} />}
             label="Thống kê"
+          />
+          <TabButton
+            tab="budget"
+            icon={<Target size={20} />}
+            label="Ngân sách"
           />
         </div>
       </div>

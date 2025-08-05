@@ -20,7 +20,16 @@ export const defaultCategories: Category[] = [
   { id: '9', name: 'Học tập', type: 'expense', color: '#3b82f6', icon: '📚' },
   { id: '10', name: 'Y tế', type: 'expense', color: '#dc2626', icon: '🏥' },
   { id: '11', name: 'Sinh hoạt', type: 'expense', color: '#059669', icon: '🏠' },
-  { id: '12', name: 'Khác', type: 'expense', color: '#6b7280', icon: '📦' },
+  { id: '12', name: 'Hoá đơn & Tiện ích', type: 'expense', color: '#0891b2', icon: '📄' },
+  { id: '13', name: 'Thuê nhà', type: 'expense', color: '#7c3aed', icon: '🏘️' },
+  { id: '14', name: 'Hoá đơn nước', type: 'expense', color: '#06b6d4', icon: '💧' },
+  { id: '15', name: 'Hoá đơn điện thoại', type: 'expense', color: '#ef4444', icon: '📱' },
+  { id: '16', name: 'Hoá đơn điện', type: 'expense', color: '#f59e0b', icon: '⚡' },
+  { id: '17', name: 'Hoá đơn gas', type: 'expense', color: '#8b5cf6', icon: '🔥' },
+  { id: '18', name: 'Hoá đơn TV', type: 'expense', color: '#06b6d4', icon: '📺' },
+  { id: '19', name: 'Hoá đơn internet', type: 'expense', color: '#10b981', icon: '🌐' },
+  { id: '20', name: 'Hoá đơn tiện ích khác', type: 'expense', color: '#f97316', icon: '🔧' },
+  { id: '21', name: 'Khác', type: 'expense', color: '#6b7280', icon: '📦' },
 ];
 
 class LocalStorageService {
