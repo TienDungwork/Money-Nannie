@@ -34,17 +34,21 @@ export function TransactionModal({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.amount || !formData.category || !formData.description) {
-      alert('Vui lòng điền đầy đủ thông tin');
+    if (!formData.amount || !formData.category) {
+      alert('Vui lòng điền số tiền và danh mục');
       return;
     }
+
+    // Tạo mô tả mặc định nếu không nhập
+    const defaultDescription = formData.description.trim() || 
+      (formData.type === 'expense' ? 'Chi tiêu' : 'Thu nhập');
 
     const newTransaction: Transaction = {
       id: transaction?.id || uuidv4(),
       type: formData.type,
       amount: parseFloat(formData.amount),
       category: formData.category,
-      description: formData.description,
+      description: defaultDescription,
       date: formData.date,
       createdAt: transaction?.createdAt || new Date().toISOString(),
     };
@@ -152,7 +156,7 @@ export function TransactionModal({
             >
               <option value="">Chọn danh mục</option>
               {filteredCategories.map((category) => (
-                <option key={category.id} value={category.name}>
+                <option key={category.id} value={category.id}>
                   {category.icon} {category.name}
                 </option>
               ))}
@@ -169,8 +173,7 @@ export function TransactionModal({
               value={formData.description}
               onChange={(e) => handleChange('description', e.target.value)}
               className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              placeholder="Mô tả giao dịch"
-              required
+              placeholder="Mô tả giao dịch (tùy chọn)"
             />
           </div>
 

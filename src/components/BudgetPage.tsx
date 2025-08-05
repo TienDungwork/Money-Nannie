@@ -4,23 +4,15 @@ import React, { useState, useEffect } from 'react';
 import { Transaction } from '@/types';
 import { Budget } from '@/types/budget';
 import { formatCurrency, calculateTotalByType } from '@/lib/utils';
+import { defaultCategories } from '@/lib/storage';
 import { Plus, Target, TrendingDown, Edit, Trash2, AlertTriangle } from 'lucide-react';
 
 interface BudgetPageProps {
   transactions: Transaction[];
 }
 
-const EXPENSE_CATEGORIES = [
-  { id: 'food', name: 'Ăn uống', icon: '🍽️' },
-  { id: 'transport', name: 'Di chuyển', icon: '🚗' },
-  { id: 'shopping', name: 'Mua sắm', icon: '🛍️' },
-  { id: 'entertainment', name: 'Giải trí', icon: '🎬' },
-  { id: 'health', name: 'Sức khỏe', icon: '🏥' },
-  { id: 'education', name: 'Giáo dục', icon: '📚' },
-  { id: 'bills', name: 'Hóa đơn', icon: '📄' },
-  { id: 'investment', name: 'Đầu tư', icon: '📈' },
-  { id: 'other', name: 'Khác', icon: '📦' },
-];
+// Get expense categories only
+const EXPENSE_CATEGORIES = defaultCategories.filter(cat => cat.type === 'expense');
 
 export function BudgetPage({ transactions }: BudgetPageProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);

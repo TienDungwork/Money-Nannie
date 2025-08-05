@@ -7,11 +7,12 @@ import { Calendar, TrendingUp, TrendingDown, Eye, EyeOff } from 'lucide-react';
 
 interface EnhancedBalanceCardProps {
   transactions: Transaction[];
+  onChartTypeChange?: (type: 'expense' | 'income') => void;
 }
 
 type TimePeriod = 'previous' | 'current' | 'future';
 
-export function EnhancedBalanceCard({ transactions }: EnhancedBalanceCardProps) {
+export function EnhancedBalanceCard({ transactions, onChartTypeChange }: EnhancedBalanceCardProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('current');
   const [showBalance, setShowBalance] = useState(true);
 
@@ -149,7 +150,10 @@ export function EnhancedBalanceCard({ transactions }: EnhancedBalanceCardProps) 
 
         {/* Stats */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <button 
+            className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            onClick={() => onChartTypeChange?.('expense')}
+          >
             <div className="flex items-center space-x-2">
               <TrendingDown className="w-5 h-5 text-red-500" />
               <span className="text-sm font-medium">Tổng đã chi</span>
@@ -157,9 +161,12 @@ export function EnhancedBalanceCard({ transactions }: EnhancedBalanceCardProps) 
             <span className="font-bold text-red-600">
               {formatBalanceDisplay(totalExpense)}
             </span>
-          </div>
+          </button>
 
-          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+          <button 
+            className="w-full flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            onClick={() => onChartTypeChange?.('income')}
+          >
             <div className="flex items-center space-x-2">
               <TrendingUp className="w-5 h-5 text-blue-500" />
               <span className="text-sm font-medium">Tổng thu</span>
@@ -167,7 +174,7 @@ export function EnhancedBalanceCard({ transactions }: EnhancedBalanceCardProps) 
             <span className="font-bold text-blue-600">
               {formatBalanceDisplay(totalIncome)}
             </span>
-          </div>
+          </button>
 
           {selectedPeriod === 'current' && (
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">

@@ -1,10 +1,9 @@
 import { Transaction, MonthlyStats, CategoryStats } from '@/types';
 
 export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-  }).format(amount);
+  // Format với dấu phẩy phân cách hàng nghìn và ký hiệu ₫
+  const formatted = new Intl.NumberFormat('vi-VN').format(amount);
+  return `${formatted} ₫`;
 }
 
 export function formatDate(date: string): string {
