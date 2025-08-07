@@ -20,6 +20,7 @@ export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [chartType, setChartType] = useState<'expense' | 'income'>('expense');
+  const [timePeriod, setTimePeriod] = useState<'current' | 'threeMonthsAgo'>('current');
   
   const { transactions, loading, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
   const { categories } = useCategories();
@@ -100,6 +101,33 @@ export default function HomePage() {
 
   const topWeekExpense = getTopExpenseCategory(7);
   const topMonthExpense = getTopExpenseCategory(30);
+
+  // Function để tính tổng theo time period
+  const calculateTotalByTimePeriod = (type: 'expense' | 'income') => {
+    if (timePeriod === 'current') {
+      // Tháng hiện tại
+      const currentMonth = new Date().toISOString().slice(0, 7);
+      return calculateTotalByType(transactions.filter(t => 
+        t.date.startsWith(currentMonth) && t.type === type
+      ), type);
+    } else {
+      // 3 tháng trước (tháng 5, 6, 7)
+      const today = new Date();
+      let total = 0;
+      
+      for (let i = 1; i <= 3; i++) {
+        const targetMonth = today.getMonth() - (4 - i) + 1;
+        const monthString = `${today.getFullYear()}-${String(targetMonth).padStart(2, '0')}`;
+        
+        const monthTransactions = transactions.filter(t => 
+          t.date.startsWith(monthString) && t.type === type
+        );
+        total += calculateTotalByType(monthTransactions, type);
+      }
+      
+      return total;
+    }
+  };
 
   const getCategoryIcon = (category: string) => {
     const icons: { [key: string]: string } = {
@@ -215,11 +243,10 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      {activeTab !== 'home' && (
+      {activeTab !== 'home' && activeTab !== 'transactions' && (
         <div className="bg-white shadow-sm">
           <div className="px-4 py-4">
             <h1 className="text-xl font-bold text-gray-900">
-              {activeTab === 'transactions' && 'Số giao dịch'}
               {activeTab === 'stats' && 'Thống kê'}
               {activeTab === 'budget' && 'Ngân sách'}
             </h1>
@@ -268,50 +295,82 @@ export default function HomePage() {
             </div>
 
             {/* Báo cáo tháng này */}
-            <div className="bg-white rounded-xl shadow-sm">
-              <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">Báo cáo tháng này</h3>
-                <span className="text-green-600 text-sm">Xem báo cáo</span>
+            <div className="bg-gray-100/60 rounded-xl shadow-sm border border-gray-200/50">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200/40">
+                <h3 className="text-lg font-semibold text-gray-600">Báo cáo tháng này</h3>
+                <span className="text-green-600 text-sm font-medium">Xem báo cáo</span>
               </div>
-              <div className="p-4">
+              <div className="p-4 bg-gray-50/40">
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <button 
-                    className="text-center p-3 rounded-lg hover:bg-red-50 transition-colors"
+                    className={`text-center p-4 rounded-xl transition-all duration-200 ${
+                      chartType === 'expense' 
+                        ? 'bg-red-50 border-2 border-red-200 shadow-sm' 
+                        : 'bg-white/70 border border-gray-300 hover:bg-red-50/60'
+                    }`}
                     onClick={() => setChartType('expense')}
                   >
-                    <p className="text-sm text-gray-500 mb-1">Tổng đã chi</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {timePeriod === 'current' ? 'Tổng đã chi' : 'Tổng chi 3 tháng trước'}
+                    </p>
                     <p className={`text-xl font-bold ${chartType === 'expense' ? 'text-red-700' : 'text-red-600'}`}>
-                      {formatCurrency(calculateTotalByType(transactions.filter(t => {
-                        const currentMonth = new Date().toISOString().slice(0, 7);
-                        return t.date.startsWith(currentMonth);
-                      }), 'expense'))}
+                      {formatCurrency(calculateTotalByTimePeriod('expense'))}
                     </p>
                   </button>
                   <button 
-                    className="text-center p-3 rounded-lg hover:bg-blue-50 transition-colors"
+                    className={`text-center p-4 rounded-xl transition-all duration-200 ${
+                      chartType === 'income' 
+                        ? 'bg-blue-50 border-2 border-blue-200 shadow-sm' 
+                        : 'bg-white/70 border border-gray-300 hover:bg-blue-50/60'
+                    }`}
                     onClick={() => setChartType('income')}
                   >
-                    <p className="text-sm text-gray-500 mb-1">Tổng thu</p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      {timePeriod === 'current' ? 'Tổng thu' : 'Tổng thu 3 tháng trước'}
+                    </p>
                     <p className={`text-xl font-bold ${chartType === 'income' ? 'text-blue-700' : 'text-blue-600'}`}>
-                      {formatCurrency(calculateTotalByType(transactions.filter(t => {
-                        const currentMonth = new Date().toISOString().slice(0, 7);
-                        return t.date.startsWith(currentMonth);
-                      }), 'income'))}
+                      {formatCurrency(calculateTotalByTimePeriod('income'))}
                     </p>
                   </button>
                 </div>
                 
                 {/* Chart */}
-                <div className="mt-4">
-                  <ExpenseChart transactions={transactions} chartType={chartType} />
+                <div className="mt-4 bg-white/80 rounded-xl p-3 border border-gray-300/40">
+                  <ExpenseChart transactions={transactions} chartType={chartType} timePeriod={timePeriod} />
                 </div>
                 
                 {/* Chart Legend */}
-                <div className="flex items-center justify-center space-x-6 mt-4 text-sm">
-                  <div className="flex items-center space-x-2">
-                    <div className={`w-3 h-3 rounded-full ${chartType === 'expense' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
-                    <span className="text-gray-600">{chartType === 'expense' ? 'Chi tiêu' : 'Thu nhập'} tháng này</span>
-                  </div>
+                <div className="flex items-center justify-center space-x-4 mt-4 text-sm">
+                  <button
+                    onClick={() => setTimePeriod('current')}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all duration-200 ${
+                      timePeriod === 'current'
+                        ? 'bg-white/80 border-gray-300/30'
+                        : 'bg-white/60 border-gray-200/20 hover:bg-white/70'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-full ${
+                      timePeriod === 'current' 
+                        ? (chartType === 'expense' ? 'bg-red-500' : 'bg-blue-500')
+                        : 'bg-gray-400'
+                    }`}></div>
+                    <span className="text-gray-700 font-medium">Tháng này</span>
+                  </button>
+                  <button
+                    onClick={() => setTimePeriod('threeMonthsAgo')}
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all duration-200 ${
+                      timePeriod === 'threeMonthsAgo'
+                        ? 'bg-white/80 border-gray-300/30'
+                        : 'bg-white/60 border-gray-200/20 hover:bg-white/70'
+                    }`}
+                  >
+                    <div className={`w-3 h-3 rounded-full ${
+                      timePeriod === 'threeMonthsAgo' 
+                        ? (chartType === 'expense' ? 'bg-red-500' : 'bg-blue-500')
+                        : 'bg-gray-400'
+                    }`}></div>
+                    <span className="text-gray-700 font-medium">3 tháng trước</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -443,7 +502,7 @@ export default function HomePage() {
 
       {/* Bottom Navigation */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="flex">
+        <div className="flex py-2">
           <TabButton
             tab="home"
             icon={<Home size={20} />}
@@ -465,6 +524,8 @@ export default function HomePage() {
             label="Thống kê"
           />
         </div>
+        {/* Extended white background to fill bottom gap */}
+        <div className="h-4 bg-white"></div>
       </div>
 
       {/* Floating Action Button */}

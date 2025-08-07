@@ -30,11 +30,115 @@ ChartJS.register(
 interface ExpenseChartProps {
   transactions: Transaction[];
   chartType: 'expense' | 'income';
+  timePeriod?: 'current' | 'threeMonthsAgo'; // Thêm prop mới
 }
 
-export function ExpenseChart({ transactions, chartType }: ExpenseChartProps) {
-  // Generate current month data from first day to last day
+export function ExpenseChart({ transactions, chartType, timePeriod = 'current' }: ExpenseChartProps) {
+  // Function để tạo dữ liệu 3 tháng gần nhất  
+  const generateThreeMonthsAgoData = () => {
+    const today = new Date();
+    const dataPoints: number[] = [];
+    const labels: string[] = [];
+    
+    // Tạo dữ liệu cho 3 tháng trước (không bao gồm tháng hiện tại)
+    // Nếu hiện tại là tháng 8 thì hiển thị tháng 5, 6, 7
+    // Nhưng cần lưu ý JavaScript Date sử dụng 0-based months
+    for (let i = 1; i <= 3; i++) {
+      // Fix: Cần +1 để match với ISO string format
+      const targetMonth = today.getMonth() - (4 - i) + 1; // +1 để convert về 1-based
+      const targetDate = new Date(today.getFullYear(), targetMonth - 1, 1); // -1 vì Date constructor cần 0-based
+      const monthString = `${today.getFullYear()}-${String(targetMonth).padStart(2, '0')}`;
+      
+      // Tạo label cho tháng (format: "Th5", "Th6", "Th7")
+      const monthLabel = `Th${targetMonth}`;
+      labels.push(monthLabel);
+      
+      // Tính tổng giao dịch trong tháng đó
+      const monthTransactions = transactions.filter(t => 
+        t.date.startsWith(monthString) && t.type === chartType
+      );
+      const monthTotal = calculateTotalByType(monthTransactions, chartType);
+      dataPoints.push(monthTotal);
+    }
+
+    const maxValue = Math.max(...dataPoints, 0);
+    
+    const calculateThreeLevelScale = (maxVal: number) => {
+      if (maxVal === 0) return { max: 300000, step: 100000, unit: 'K' };
+      
+      const paddedMax = maxVal * 1.1;
+      let finalMax;
+      
+      if (paddedMax < 1000000) {
+        finalMax = Math.ceil(paddedMax / 100000) * 100000;
+      } else {
+        finalMax = Math.ceil(paddedMax / 1000000) * 1000000;
+      }
+      
+      const step = Math.round(finalMax / 3);
+      
+      if (finalMax < 1000000) {
+        return { max: finalMax, step: step, unit: 'K' };
+      } else {
+        return { max: finalMax, step: step, unit: 'M' };
+      }
+    };
+    
+    const scale = calculateThreeLevelScale(maxValue);
+
+    return {
+      labels: labels,
+      datasets: [
+        {
+          label: chartType === 'expense' ? 'Chi tiêu 3 tháng trước' : 'Thu nhập 3 tháng trước',
+          data: dataPoints,
+          borderColor: chartType === 'expense' ? '#ef4444' : '#2563eb',
+          backgroundColor: (context: any) => {
+            const chart = context.chart;
+            const {ctx, chartArea} = chart;
+            
+            if (!chartArea) {
+              return null;
+            }
+            
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            if (chartType === 'expense') {
+              gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+              gradient.addColorStop(0.6, 'rgba(239, 68, 68, 0.1)');
+              gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+            } else {
+              gradient.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
+              gradient.addColorStop(0.6, 'rgba(37, 99, 235, 0.1)');
+              gradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
+            }
+            return gradient;
+          },
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: 'transparent',
+          pointBorderColor: 'transparent',
+          pointBorderWidth: 0,
+          pointRadius: 0,
+          pointHoverRadius: 0,
+          borderWidth: 2,
+          spanGaps: false,
+        },
+      ],
+      maxValue: scale.max,
+      stepSize: scale.step,
+      unit: scale.unit,
+      periodInfo: { type: 'threeMonthsAgo', period: '3 tháng trước' }
+    };
+  };
+
+  // Generate chart data based on time period
   const generateChartData = () => {
+    // Nếu là 3 tháng trước, tạo logic mới
+    if (timePeriod === 'threeMonthsAgo') {
+      return generateThreeMonthsAgoData();
+    }
+    
+    // Giữ nguyên logic cũ cho tháng hiện tại
     const today = new Date();
     const year = today.getFullYear();
     const month = today.getMonth();
@@ -158,6 +262,7 @@ export function ExpenseChart({ transactions, chartType }: ExpenseChartProps) {
       maxValue: scale.max,
       stepSize: scale.step,
       unit: scale.unit,
+      periodInfo: { type: 'current', month: month + 1, year: year }
     };
   };
 
@@ -180,15 +285,26 @@ export function ExpenseChart({ transactions, chartType }: ExpenseChartProps) {
         cornerRadius: 8,
         callbacks: {
           title: function(context: any) {
-            const day = parseInt(context[0].label);
-            const currentDate = new Date();
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth() + 1; // getMonth() returns 0-11, so add 1
-            return `Ngày ${day}/${month}/${year}`;
+            const periodInfo = chartData.periodInfo;
+            if (timePeriod === 'threeMonthsAgo') {
+              // Với 3 tháng, hiển thị tên tháng trực tiếp từ label
+              return context[0].label;
+            } else {
+              // Với tháng hiện tại, hiển thị ngày/tháng/năm
+              const day = parseInt(context[0].label);
+              const currentPeriodInfo = periodInfo as { type: string; month: number; year: number; };
+              return `Ngày ${day}/${currentPeriodInfo.month}/${currentPeriodInfo.year}`;
+            }
           },
           label: function(context: any) {
             const value = context.parsed.y;
-            return `${chartType === 'expense' ? 'Tổng chi tiêu' : 'Tổng thu nhập'}: ${formatCurrency(value)}`;
+            if (timePeriod === 'current') {
+              return `${chartType === 'expense' ? 'Tổng chi tiêu' : 'Tổng thu nhập'} tháng này: ${formatCurrency(value)}`;
+            } else {
+              // Với 3 tháng, hiển thị theo từng tháng cụ thể
+              const monthLabel = context.label; // "Th5", "Th6", "Th7"
+              return `${chartType === 'expense' ? 'Tổng chi tiêu' : 'Tổng thu nhập'} của ${monthLabel}: ${formatCurrency(value)}`;
+            }
           }
         }
       }
@@ -234,9 +350,14 @@ export function ExpenseChart({ transactions, chartType }: ExpenseChartProps) {
           callback: function(value: any, index: number) {
             const label = chartData.labels[index];
             
-            // Hiển thị các ngày quan trọng: 01/08, 05/08, 10/08, 15/08, 20/08, 25/08, 31/08
-            if (label === '01/08' || label === '05/08' || label === '10/08' || 
-                label === '15/08' || label === '20/08' || label === '25/08' || label === '31/08') {
+            if (timePeriod === 'current') {
+              // Logic cũ cho tháng hiện tại - hiển thị ngày
+              if (label === '01/08' || label === '05/08' || label === '10/08' || 
+                  label === '15/08' || label === '20/08' || label === '25/08' || label === '31/08') {
+                return label;
+              }
+            } else {
+              // Logic mới cho 3 tháng - hiển thị tất cả tên tháng
               return label;
             }
             return '';
