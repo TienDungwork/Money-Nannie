@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Transaction, Wallet } from '@/types';
+import { Transaction, Wallet, Category } from '@/types';
 import { useTransactions, useCategories, useWallets } from '@/hooks/useStorage';
 import { TransactionItem } from '@/components/TransactionItem';
 import { TransactionModal } from '@/components/TransactionModal';
@@ -610,7 +610,7 @@ export default function HomePage() {
         wallets={wallets}
         transaction={editingTransaction}
         onAddCategory={addCategory}
-        onUpdateCategory={updateCategory}
+        onUpdateCategory={(category: Category) => updateCategory(category.id, category)}
         onDeleteCategory={deleteCategory}
       />
     </div>
