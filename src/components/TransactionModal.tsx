@@ -16,8 +16,6 @@ interface TransactionModalProps {
   wallets: Wallet[];
   transaction?: Transaction | null;
   onAddCategory?: (category: Category) => void;
-  onUpdateCategory?: (category: Category) => void;
-  onDeleteCategory?: (categoryId: string) => void;
 }
 
 // Dữ liệu danh mục mẫu
@@ -35,7 +33,7 @@ const sampleCategories: Category[] = [
   // Khoản chi - Mua sắm
   { id: 'expense-shopping', name: 'Mua sắm', type: 'expense', color: '#f97316', icon: '🛍️', isParent: true },
   { id: 'expense-shopping-personal', name: 'Đồ dùng cá nhân', type: 'expense', color: '#f97316', icon: '👤', parentId: 'expense-shopping' },
-  { id: 'expense-shopping-household', name: 'Đồ gia dụng', type: 'expense', color: '#f97316', icon: '🏠', parentId: 'expense-shopping' },
+  { id: 'expense-shopping-household', name: 'Đồ gia dụng', type: 'expense', color: '#f97316', icon: '🪑', parentId: 'expense-shopping' },
   { id: 'expense-shopping-beauty', name: 'Làm đẹp', type: 'expense', color: '#f97316', icon: '✨', parentId: 'expense-shopping' },
 
   // Khoản chi - Di chuyển
@@ -52,8 +50,8 @@ const sampleCategories: Category[] = [
 
   // Khoản chi - Bảo hiểm
   { id: 'expense-insurance', name: 'Bảo hiểm', type: 'expense', color: '#8b5cf6', icon: '🛡️', isParent: true },
-  { id: 'expense-insurance-health', name: 'Bảo hiểm y tế', type: 'expense', color: '#8b5cf6', icon: '🏥', parentId: 'expense-insurance' },
-  { id: 'expense-insurance-life', name: 'Bảo hiểm nhân thọ', type: 'expense', color: '#8b5cf6', icon: '❤️', parentId: 'expense-insurance' },
+  { id: 'expense-insurance-health', name: 'Bảo hiểm y tế', type: 'expense', color: '#8b5cf6', icon: '⚕️', parentId: 'expense-insurance' },
+  { id: 'expense-insurance-life', name: 'Bảo hiểm nhân thọ', type: 'expense', color: '#8b5cf6', icon: '👨‍👩‍👧‍👦', parentId: 'expense-insurance' },
   { id: 'expense-insurance-car', name: 'Bảo hiểm xe', type: 'expense', color: '#8b5cf6', icon: '🚗', parentId: 'expense-insurance' },
   { id: 'expense-insurance-house', name: 'Bảo hiểm nhà', type: 'expense', color: '#8b5cf6', icon: '🏠', parentId: 'expense-insurance' },
 
@@ -85,21 +83,24 @@ const sampleCategories: Category[] = [
   // Khoản chi - Chi phí khác
   { id: 'expense-others', name: 'Chi phí khác', type: 'expense', color: '#6b7280', icon: '📦', isParent: true },
   { id: 'expense-others-gift', name: 'Quà tặng', type: 'expense', color: '#6b7280', icon: '🎁', parentId: 'expense-others' },
-  { id: 'expense-others-donation', name: 'Từ thiện', type: 'expense', color: '#6b7280', icon: '🤝', parentId: 'expense-others' },
+  { id: 'expense-others-donation', name: 'Từ thiện', type: 'expense', color: '#6b7280', icon: '❤️', parentId: 'expense-others' },
   { id: 'expense-others-fine', name: 'Phạt', type: 'expense', color: '#6b7280', icon: '⚠️', parentId: 'expense-others' },
-  { id: 'expense-others-tax', name: 'Thuế', type: 'expense', color: '#6b7280', icon: '🧾', parentId: 'expense-others' },
+  { id: 'expense-others-tax', name: 'Thuế', type: 'expense', color: '#6b7280', icon: '📋', parentId: 'expense-others' },
 
   // Khoản thu
   { id: 'income-salary', name: 'Lương', type: 'income', color: '#22c55e', icon: '💵', isParent: true },
-  { id: 'income-business', name: 'Kinh doanh', type: 'income', color: '#22c55e', icon: '📈', isParent: true },
-  { id: 'income-investment', name: 'Đầu tư', type: 'income', color: '#22c55e', icon: '🐷', isParent: true },
-  { id: 'income-bonus', name: 'Thưởng', type: 'income', color: '#22c55e', icon: '🎁', isParent: true },
+  { id: 'income-business', name: 'Kinh doanh', type: 'income', color: '#22c55e', icon: '🏢', isParent: true },
+  { id: 'income-investment', name: 'Lợi nhuận đầu tư', type: 'income', color: '#22c55e', icon: '💹', isParent: true },
+  { id: 'income-bonus', name: 'Thưởng', type: 'income', color: '#22c55e', icon: '🎉', isParent: true },
 
   // Vay/Nợ
-  { id: 'loan-lend', name: 'Cho vay', type: 'loan', color: '#8b5cf6', icon: '🤲', isParent: true },
-  { id: 'loan-repay', name: 'Trả nợ', type: 'loan', color: '#8b5cf6', icon: '💳', isParent: true },
-  { id: 'loan-collect', name: 'Thu nợ', type: 'loan', color: '#8b5cf6', icon: '👛', isParent: true },
-  { id: 'loan-borrow', name: 'Đi vay', type: 'loan', color: '#8b5cf6', icon: '🤝', isParent: true },
+// Vay/Nợ
+{ id: 'loan-out', name: 'Cho vay', type: 'loan', color: '#8b5cf6', icon: '💸', isParent: true },
+{ id: 'loan-repayment', name: 'Trả nợ', type: 'loan', color: '#8b5cf6', icon: '📤', isParent: true },
+{ id: 'loan-collection', name: 'Thu nợ', type: 'loan', color: '#8b5cf6', icon: '💰', isParent: true },
+{ id: 'loan-in', name: 'Đi vay', type: 'loan', color: '#8b5cf6', icon: '📥', isParent: true },
+
+
 ];
 
 // Custom Number Keyboard Component
@@ -156,9 +157,7 @@ export function TransactionModal({
   categories,
   wallets,
   transaction,
-  onAddCategory,
-  onUpdateCategory,
-  onDeleteCategory
+  onAddCategory
 }: TransactionModalProps) {
   const [currentView, setCurrentView] = useState<NavigationView>('main');
   const [showKeyboard, setShowKeyboard] = useState(false);
@@ -179,7 +178,6 @@ export function TransactionModal({
   const [selectedIcon, setSelectedIcon] = useState('DollarSign');
   const [isParentCategory, setIsParentCategory] = useState(true);
   const [selectedParentId, setSelectedParentId] = useState<string>('');
-  const [showEditOptions, setShowEditOptions] = useState<string | null>(null);
 
   const amountInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -237,7 +235,6 @@ export function TransactionModal({
       setSelectedIcon('DollarSign');
       setIsParentCategory(true);
       setSelectedParentId('');
-      setShowEditOptions(null);
     }
   }, [transaction, isOpen, wallets]);
 
@@ -497,24 +494,6 @@ export function TransactionModal({
     
     const parentCategories = getParentCategories(selectedCategoryType);
     
-    const handleEdit = (category: Category) => {
-      // Thiết lập dữ liệu để edit
-      setSelectedParentCategory(category);
-      setNewCategoryName(category.name);
-      setSelectedIcon(category.icon);
-      setIsParentCategory(category.isParent ?? true);
-      setSelectedParentId(category.parentId || '');
-      setCurrentView('add-category');
-    };
-
-    const handleDelete = (categoryId: string) => {
-      if (confirm('Bạn có chắc muốn xóa nhóm này? Tất cả giao dịch thuộc nhóm này sẽ không có danh mục.')) {
-        // Trong thực tế sẽ gọi API để xóa
-        console.log('Xóa category:', categoryId);
-        setShowEditOptions(null);
-      }
-    };
-    
     return (
       <div className="h-full flex flex-col animate-in slide-in-from-right duration-300 min-h-0">
         <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2 min-h-0" 
@@ -543,29 +522,17 @@ export function TransactionModal({
 
           {parentCategories.map((category) => {
             const hasChildren = getChildCategories(category.id).length > 0;
-            const isCustomCategory = !['expense-bills', 'expense-shopping', 'expense-transport', 'expense-food', 'income-salary', 'income-business', 'income-investment', 'income-bonus', 'loan-lend', 'loan-repay', 'loan-collect', 'loan-borrow'].includes(category.id);
             
             return (
-              <div key={category.id} className="relative">
+              <div key={category.id}>
                 <div
                   onClick={() => {
-                    if (showEditOptions === category.id) {
-                      setShowEditOptions(null);
-                      return;
-                    }
-                    
                     if (hasChildren) {
                       setSelectedParentCategory(category);
                       setCurrentView('category-child');
                     } else {
                       handleChange('category', category.id);
                       setCurrentView('main');
-                    }
-                  }}
-                  onContextMenu={(e) => {
-                    if (isCustomCategory) {
-                      e.preventDefault();
-                      setShowEditOptions(showEditOptions === category.id ? null : category.id);
                     }
                   }}
                   className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200"
@@ -585,18 +552,6 @@ export function TransactionModal({
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {/* Menu button cho custom categories */}
-                    {isCustomCategory && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowEditOptions(showEditOptions === category.id ? null : category.id);
-                        }}
-                        className="p-1 text-gray-400 hover:text-gray-600"
-                      >
-                        <span className="text-lg">⋮</span>
-                      </button>
-                    )}
                     {formData.category === category.id ? (
                       <Check size={20} className="text-green-600" />
                     ) : (
@@ -604,33 +559,6 @@ export function TransactionModal({
                     )}
                   </div>
                 </div>
-
-                {/* Edit options dropdown */}
-                {showEditOptions === category.id && isCustomCategory && (
-                  <div className="absolute right-4 top-16 bg-white rounded-lg shadow-lg border border-gray-200 z-10 min-w-32">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleEdit(category);
-                        setShowEditOptions(null);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center space-x-2"
-                    >
-                      <span>✏️</span>
-                      <span>Sửa</span>
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDelete(category.id);
-                      }}
-                      className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-red-600 flex items-center space-x-2"
-                    >
-                      <span>🗑️</span>
-                      <span>Xóa</span>
-                    </button>
-                  </div>
-                )}
               </div>
             );
           })}
@@ -718,9 +646,6 @@ export function TransactionModal({
           parentId: isParentCategory ? undefined : selectedParentId || undefined
         };
         
-        if (onUpdateCategory) {
-          onUpdateCategory(updatedCategory);
-        }
         console.log('Cập nhật category:', updatedCategory);
       } else {
         // Tạo category mới

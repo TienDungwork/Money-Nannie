@@ -610,8 +610,6 @@ export default function HomePage() {
         wallets={wallets}
         transaction={editingTransaction}
         onAddCategory={addCategory}
-        onUpdateCategory={(category: Category) => updateCategory(category.id, category)}
-        onDeleteCategory={deleteCategory}
       />
     </div>
   );
