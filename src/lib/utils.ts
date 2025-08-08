@@ -14,6 +14,16 @@ export function formatDate(date: string): string {
   }).format(new Date(date));
 }
 
+export function formatDetailedDate(date: string): string {
+  const dateObj = new Date(date);
+  return new Intl.DateTimeFormat('vi-VN', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'long', 
+    year: 'numeric',
+  }).format(dateObj);
+}
+
 export function formatRelativeDate(date: string): string {
   const now = new Date();
   const transactionDate = new Date(date);

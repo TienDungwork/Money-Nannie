@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { Transaction } from '@/types';
-import { formatCurrency, formatRelativeDate } from '@/lib/utils';
+import { formatCurrency, formatDetailedDate } from '@/lib/utils';
 import { ArrowUpCircle, ArrowDownCircle, Trash2, Edit } from 'lucide-react';
+import { defaultCategories } from '@/lib/storage';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -13,23 +14,30 @@ interface TransactionItemProps {
 
 export function TransactionItem({ transaction, onEdit, onDelete }: TransactionItemProps) {
   const isIncome = transaction.type === 'income';
+  
+  // Tìm category theo ID
+  const category = defaultCategories.find(cat => cat.id === transaction.category);
+  const categoryName = category?.name || transaction.category;
+  const categoryIcon = category?.icon || '📦';
 
   return (
     <div className="bg-white rounded-lg p-4 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <div className={`p-2 rounded-full ${isIncome ? 'bg-success-50' : 'bg-danger-50'}`}>
-            {isIncome ? (
-              <ArrowUpCircle className="w-5 h-5 text-success-600" />
-            ) : (
-              <ArrowDownCircle className="w-5 h-5 text-danger-600" />
-            )}
+            <span className="text-lg">{categoryIcon}</span>
           </div>
           
           <div>
-            <h3 className="font-medium text-gray-900">{transaction.description}</h3>
-            <p className="text-sm text-gray-500">{transaction.category}</p>
-            <p className="text-xs text-gray-400">{formatRelativeDate(transaction.date)}</p>
+            <h3 className="font-medium text-gray-900">{categoryName}</h3>
+            <p className="text-sm text-gray-500">{transaction.description}</p>
+            {(transaction as any).withPerson && (
+              <p className="text-xs text-blue-600">Với {(transaction as any).withPerson}</p>
+            )}
+            {(transaction as any).note && (
+              <p className="text-xs text-gray-400 mt-1">{(transaction as any).note}</p>
+            )}
+            <p className="text-xs text-gray-400 mt-1">{formatDetailedDate(transaction.date)}</p>
           </div>
         </div>
         

@@ -1,8 +1,9 @@
-import { Transaction, Category } from '@/types';
+import { Transaction, Category, Wallet } from '@/types';
 
 const STORAGE_KEYS = {
   TRANSACTIONS: 'expense-tracker-transactions',
   CATEGORIES: 'expense-tracker-categories',
+  WALLETS: 'expense-tracker-wallets',
 } as const;
 
 export const defaultCategories: Category[] = [
@@ -30,6 +31,19 @@ export const defaultCategories: Category[] = [
   { id: '19', name: 'Hoá đơn internet', type: 'expense', color: '#10b981', icon: '🌐' },
   { id: '20', name: 'Hoá đơn tiện ích khác', type: 'expense', color: '#f97316', icon: '🔧' },
   { id: '21', name: 'Khác', type: 'expense', color: '#6b7280', icon: '📦' },
+];
+
+export const defaultWallets: Wallet[] = [
+  {
+    id: 'wallet-1',
+    name: 'Tiền mặt',
+    type: 'cash',
+    balance: 0,
+    icon: '💼',
+    color: '#10b981',
+    isDefault: true,
+    createdAt: new Date().toISOString()
+  }
 ];
 
 class LocalStorageService {
@@ -96,6 +110,54 @@ class LocalStorageService {
     }
   }
 
+  // Wallets
+  getWallets(): Wallet[] {
+    if (typeof window === 'undefined') return defaultWallets;
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.WALLETS);
+      return data ? JSON.parse(data) : defaultWallets;
+    } catch (error) {
+      console.error('Error loading wallets:', error);
+      return defaultWallets;
+    }
+  }
+
+  saveWallets(wallets: Wallet[]): void {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(STORAGE_KEYS.WALLETS, JSON.stringify(wallets));
+    } catch (error) {
+      console.error('Error saving wallets:', error);
+    }
+  }
+
+  addWallet(wallet: Omit<Wallet, 'id' | 'createdAt'>): Wallet {
+    const wallets = this.getWallets();
+    const newWallet: Wallet = {
+      ...wallet,
+      id: `wallet-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+    };
+    wallets.push(newWallet);
+    this.saveWallets(wallets);
+    return newWallet;
+  }
+
+  updateWallet(id: string, updatedWallet: Partial<Wallet>): void {
+    const wallets = this.getWallets();
+    const index = wallets.findIndex(w => w.id === id);
+    if (index !== -1) {
+      wallets[index] = { ...wallets[index], ...updatedWallet };
+      this.saveWallets(wallets);
+    }
+  }
+
+  deleteWallet(id: string): void {
+    const wallets = this.getWallets();
+    const filtered = wallets.filter(w => w.id !== id);
+    this.saveWallets(filtered);
+  }
+
   // Initialize default data
   initializeDefaultData(): void {
     if (typeof window === 'undefined') return;
@@ -104,6 +166,12 @@ class LocalStorageService {
     const existingCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
     if (!existingCategories) {
       this.saveCategories(defaultCategories);
+    }
+
+    // Initialize wallets if not exists
+    const existingWallets = localStorage.getItem(STORAGE_KEYS.WALLETS);
+    if (!existingWallets) {
+      this.saveWallets(defaultWallets);
     }
 
     // Initialize transactions if not exists

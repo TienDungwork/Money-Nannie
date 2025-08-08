@@ -103,9 +103,9 @@ export function ExpenseChart({ transactions, chartType, timePeriod = 'current' }
             
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
             if (chartType === 'expense') {
-              gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
-              gradient.addColorStop(0.6, 'rgba(239, 68, 68, 0.1)');
-              gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');
+              gradient.addColorStop(0, 'rgba(239, 68, 68, 0.6)'); // Đỏ đậm hơn ở trên
+              gradient.addColorStop(0.6, 'rgba(239, 68, 68, 0.25)'); // Đỏ đậm hơn ở giữa
+              gradient.addColorStop(1, 'rgba(239, 68, 68, 0.05)'); // Nhạt hơn nhưng vẫn có màu ở dưới
             } else {
               gradient.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
               gradient.addColorStop(0.6, 'rgba(37, 99, 235, 0.1)');
@@ -237,9 +237,9 @@ export function ExpenseChart({ transactions, chartType, timePeriod = 'current' }
             // Tạo gradient từ trên xuống dưới
             const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
             if (chartType === 'expense') {
-              gradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)'); // Đỏ đậm ở trên
-              gradient.addColorStop(0.6, 'rgba(239, 68, 68, 0.1)'); // Đỏ nhạt ở giữa  
-              gradient.addColorStop(1, 'rgba(239, 68, 68, 0)');   // Trong suốt ở dưới
+              gradient.addColorStop(0, 'rgba(239, 68, 68, 0.6)'); // Đỏ đậm hơn ở trên
+              gradient.addColorStop(0.6, 'rgba(239, 68, 68, 0.25)'); // Đỏ đậm hơn ở giữa  
+              gradient.addColorStop(1, 'rgba(239, 68, 68, 0.05)');   // Nhạt hơn nhưng vẫn có màu ở dưới
             } else {
               gradient.addColorStop(0, 'rgba(37, 99, 235, 0.4)');
               gradient.addColorStop(0.6, 'rgba(37, 99, 235, 0.1)');
