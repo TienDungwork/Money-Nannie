@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { X, ChevronRight, Calendar, ArrowLeft, Check, Delete } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 
-type NavigationView = 'main' | 'wallet' | 'category' | 'category-type' | 'category-parent' | 'category-child' | 'add-category' | 'date';
+type NavigationView = 'main' | 'wallet' | 'category' | 'category-type' | 'category-parent' | 'category-child' | 'add-category' | 'icon-picker' | 'parent-category-picker';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -15,49 +15,91 @@ interface TransactionModalProps {
   categories: Category[];
   wallets: Wallet[];
   transaction?: Transaction | null;
+  onAddCategory?: (category: Category) => void;
+  onUpdateCategory?: (category: Category) => void;
+  onDeleteCategory?: (categoryId: string) => void;
 }
 
 // Dữ liệu danh mục mẫu
 const sampleCategories: Category[] = [
   // Khoản chi - Hóa đơn và tiện ích
-  { id: 'expense-bills', name: 'Hóa đơn & Tiện ích', type: 'expense', color: '#ef4444', icon: 'Receipt', isParent: true },
-  { id: 'expense-bills-rent', name: 'Thuê nhà', type: 'expense', color: '#ef4444', icon: 'Home', parentId: 'expense-bills' },
-  { id: 'expense-bills-electric', name: 'Hóa đơn điện', type: 'expense', color: '#ef4444', icon: 'Zap', parentId: 'expense-bills' },
-  { id: 'expense-bills-water', name: 'Hóa đơn nước', type: 'expense', color: '#ef4444', icon: 'Droplets', parentId: 'expense-bills' },
-  { id: 'expense-bills-internet', name: 'Internet', type: 'expense', color: '#ef4444', icon: 'Wifi', parentId: 'expense-bills' },
-  { id: 'expense-bills-phone', name: 'Hóa đơn điện thoại', type: 'expense', color: '#ef4444', icon: 'Phone', parentId: 'expense-bills' },
-  { id: 'expense-bills-gas', name: 'Hóa đơn gas', type: 'expense', color: '#ef4444', icon: 'Flame', parentId: 'expense-bills' },
-  { id: 'expense-bills-tv', name: 'Hóa đơn TV', type: 'expense', color: '#ef4444', icon: 'Tv', parentId: 'expense-bills' },
+  { id: 'expense-bills', name: 'Hóa đơn & Tiện ích', type: 'expense', color: '#ef4444', icon: '🧾', isParent: true },
+  { id: 'expense-bills-rent', name: 'Thuê nhà', type: 'expense', color: '#ef4444', icon: '🏠', parentId: 'expense-bills' },
+  { id: 'expense-bills-electric', name: 'Hóa đơn điện', type: 'expense', color: '#ef4444', icon: '⚡', parentId: 'expense-bills' },
+  { id: 'expense-bills-water', name: 'Hóa đơn nước', type: 'expense', color: '#ef4444', icon: '💧', parentId: 'expense-bills' },
+  { id: 'expense-bills-internet', name: 'Internet', type: 'expense', color: '#ef4444', icon: '📶', parentId: 'expense-bills' },
+  { id: 'expense-bills-phone', name: 'Hóa đơn điện thoại', type: 'expense', color: '#ef4444', icon: '📱', parentId: 'expense-bills' },
+  { id: 'expense-bills-gas', name: 'Hóa đơn gas', type: 'expense', color: '#ef4444', icon: '🔥', parentId: 'expense-bills' },
+  { id: 'expense-bills-tv', name: 'Hóa đơn TV', type: 'expense', color: '#ef4444', icon: '📺', parentId: 'expense-bills' },
 
   // Khoản chi - Mua sắm
-  { id: 'expense-shopping', name: 'Mua sắm', type: 'expense', color: '#f97316', icon: 'ShoppingBag', isParent: true },
-  { id: 'expense-shopping-personal', name: 'Đồ dùng cá nhân', type: 'expense', color: '#f97316', icon: 'User', parentId: 'expense-shopping' },
-  { id: 'expense-shopping-household', name: 'Đồ gia dụng', type: 'expense', color: '#f97316', icon: 'Home', parentId: 'expense-shopping' },
-  { id: 'expense-shopping-beauty', name: 'Làm đẹp', type: 'expense', color: '#f97316', icon: 'Sparkles', parentId: 'expense-shopping' },
+  { id: 'expense-shopping', name: 'Mua sắm', type: 'expense', color: '#f97316', icon: '🛍️', isParent: true },
+  { id: 'expense-shopping-personal', name: 'Đồ dùng cá nhân', type: 'expense', color: '#f97316', icon: '👤', parentId: 'expense-shopping' },
+  { id: 'expense-shopping-household', name: 'Đồ gia dụng', type: 'expense', color: '#f97316', icon: '🏠', parentId: 'expense-shopping' },
+  { id: 'expense-shopping-beauty', name: 'Làm đẹp', type: 'expense', color: '#f97316', icon: '✨', parentId: 'expense-shopping' },
 
   // Khoản chi - Di chuyển
-  { id: 'expense-transport', name: 'Di chuyển', type: 'expense', color: '#3b82f6', icon: 'Car', isParent: true },
-  { id: 'expense-transport-fuel', name: 'Xăng xe', type: 'expense', color: '#3b82f6', icon: 'Fuel', parentId: 'expense-transport' },
-  { id: 'expense-transport-maintenance', name: 'Bảo dưỡng xe', type: 'expense', color: '#3b82f6', icon: 'Wrench', parentId: 'expense-transport' },
-  { id: 'expense-transport-parking', name: 'Phí đậu xe', type: 'expense', color: '#3b82f6', icon: 'ParkingCircle', parentId: 'expense-transport' },
+  { id: 'expense-transport', name: 'Di chuyển', type: 'expense', color: '#3b82f6', icon: '🚗', isParent: true },
+  { id: 'expense-transport-fuel', name: 'Xăng xe', type: 'expense', color: '#3b82f6', icon: '⛽', parentId: 'expense-transport' },
+  { id: 'expense-transport-maintenance', name: 'Bảo dưỡng xe', type: 'expense', color: '#3b82f6', icon: '🔧', parentId: 'expense-transport' },
+  { id: 'expense-transport-parking', name: 'Phí đậu xe', type: 'expense', color: '#3b82f6', icon: '🅿️', parentId: 'expense-transport' },
 
   // Khoản chi - Ăn uống
-  { id: 'expense-food', name: 'Ăn uống', type: 'expense', color: '#10b981', icon: 'UtensilsCrossed', isParent: true },
-  { id: 'expense-food-restaurant', name: 'Nhà hàng', type: 'expense', color: '#10b981', icon: 'ChefHat', parentId: 'expense-food' },
-  { id: 'expense-food-fastfood', name: 'Thức ăn nhanh', type: 'expense', color: '#10b981', icon: 'Pizza', parentId: 'expense-food' },
-  { id: 'expense-food-coffee', name: 'Cà phê & Đồ uống', type: 'expense', color: '#10b981', icon: 'Coffee', parentId: 'expense-food' },
+  { id: 'expense-food', name: 'Ăn uống', type: 'expense', color: '#10b981', icon: '🍽️', isParent: true },
+  { id: 'expense-food-restaurant', name: 'Nhà hàng', type: 'expense', color: '#10b981', icon: '👨‍🍳', parentId: 'expense-food' },
+  { id: 'expense-food-fastfood', name: 'Thức ăn nhanh', type: 'expense', color: '#10b981', icon: '🍕', parentId: 'expense-food' },
+  { id: 'expense-food-coffee', name: 'Cà phê & Đồ uống', type: 'expense', color: '#10b981', icon: '☕', parentId: 'expense-food' },
+
+  // Khoản chi - Bảo hiểm
+  { id: 'expense-insurance', name: 'Bảo hiểm', type: 'expense', color: '#8b5cf6', icon: '🛡️', isParent: true },
+  { id: 'expense-insurance-health', name: 'Bảo hiểm y tế', type: 'expense', color: '#8b5cf6', icon: '🏥', parentId: 'expense-insurance' },
+  { id: 'expense-insurance-life', name: 'Bảo hiểm nhân thọ', type: 'expense', color: '#8b5cf6', icon: '❤️', parentId: 'expense-insurance' },
+  { id: 'expense-insurance-car', name: 'Bảo hiểm xe', type: 'expense', color: '#8b5cf6', icon: '🚗', parentId: 'expense-insurance' },
+  { id: 'expense-insurance-house', name: 'Bảo hiểm nhà', type: 'expense', color: '#8b5cf6', icon: '🏠', parentId: 'expense-insurance' },
+
+  // Khoản chi - Giáo dục
+  { id: 'expense-education', name: 'Giáo dục', type: 'expense', color: '#f59e0b', icon: '🎓', isParent: true },
+  { id: 'expense-education-tuition', name: 'Học phí', type: 'expense', color: '#f59e0b', icon: '🏫', parentId: 'expense-education' },
+  { id: 'expense-education-books', name: 'Sách vở', type: 'expense', color: '#f59e0b', icon: '📚', parentId: 'expense-education' },
+  { id: 'expense-education-course', name: 'Khóa học', type: 'expense', color: '#f59e0b', icon: '💻', parentId: 'expense-education' },
+
+  // Khoản chi - Y tế
+  { id: 'expense-healthcare', name: 'Y tế', type: 'expense', color: '#ef4444', icon: '🏥', isParent: true },
+  { id: 'expense-healthcare-doctor', name: 'Khám bác sĩ', type: 'expense', color: '#ef4444', icon: '👨‍⚕️', parentId: 'expense-healthcare' },
+  { id: 'expense-healthcare-medicine', name: 'Thuốc men', type: 'expense', color: '#ef4444', icon: '💊', parentId: 'expense-healthcare' },
+  { id: 'expense-healthcare-dental', name: 'Nha khoa', type: 'expense', color: '#ef4444', icon: '🦷', parentId: 'expense-healthcare' },
+
+  // Khoản chi - Giải trí
+  { id: 'expense-entertainment', name: 'Giải trí', type: 'expense', color: '#ec4899', icon: '🎮', isParent: true },
+  { id: 'expense-entertainment-movie', name: 'Xem phim', type: 'expense', color: '#ec4899', icon: '🎬', parentId: 'expense-entertainment' },
+  { id: 'expense-entertainment-sport', name: 'Thể thao', type: 'expense', color: '#ec4899', icon: '⚽', parentId: 'expense-entertainment' },
+  { id: 'expense-entertainment-travel', name: 'Du lịch', type: 'expense', color: '#ec4899', icon: '✈️', parentId: 'expense-entertainment' },
+  { id: 'expense-entertainment-music', name: 'Âm nhạc', type: 'expense', color: '#ec4899', icon: '🎵', parentId: 'expense-entertainment' },
+
+  // Khoản chi - Đầu tư
+  { id: 'expense-investment', name: 'Đầu tư', type: 'expense', color: '#059669', icon: '📈', isParent: true },
+  { id: 'expense-investment-stocks', name: 'Cổ phiếu', type: 'expense', color: '#059669', icon: '📊', parentId: 'expense-investment' },
+  { id: 'expense-investment-crypto', name: 'Tiền điện tử', type: 'expense', color: '#059669', icon: '₿', parentId: 'expense-investment' },
+  { id: 'expense-investment-gold', name: 'Vàng', type: 'expense', color: '#059669', icon: '🥇', parentId: 'expense-investment' },
+
+  // Khoản chi - Chi phí khác
+  { id: 'expense-others', name: 'Chi phí khác', type: 'expense', color: '#6b7280', icon: '📦', isParent: true },
+  { id: 'expense-others-gift', name: 'Quà tặng', type: 'expense', color: '#6b7280', icon: '🎁', parentId: 'expense-others' },
+  { id: 'expense-others-donation', name: 'Từ thiện', type: 'expense', color: '#6b7280', icon: '🤝', parentId: 'expense-others' },
+  { id: 'expense-others-fine', name: 'Phạt', type: 'expense', color: '#6b7280', icon: '⚠️', parentId: 'expense-others' },
+  { id: 'expense-others-tax', name: 'Thuế', type: 'expense', color: '#6b7280', icon: '🧾', parentId: 'expense-others' },
 
   // Khoản thu
-  { id: 'income-salary', name: 'Lương', type: 'income', color: '#22c55e', icon: 'Banknote', isParent: true },
-  { id: 'income-business', name: 'Kinh doanh', type: 'income', color: '#22c55e', icon: 'TrendingUp', isParent: true },
-  { id: 'income-investment', name: 'Đầu tư', type: 'income', color: '#22c55e', icon: 'PiggyBank', isParent: true },
-  { id: 'income-bonus', name: 'Thưởng', type: 'income', color: '#22c55e', icon: 'Gift', isParent: true },
+  { id: 'income-salary', name: 'Lương', type: 'income', color: '#22c55e', icon: '💵', isParent: true },
+  { id: 'income-business', name: 'Kinh doanh', type: 'income', color: '#22c55e', icon: '📈', isParent: true },
+  { id: 'income-investment', name: 'Đầu tư', type: 'income', color: '#22c55e', icon: '🐷', isParent: true },
+  { id: 'income-bonus', name: 'Thưởng', type: 'income', color: '#22c55e', icon: '🎁', isParent: true },
 
   // Vay/Nợ
-  { id: 'loan-lend', name: 'Cho vay', type: 'loan', color: '#8b5cf6', icon: 'HandCoins', isParent: true },
-  { id: 'loan-repay', name: 'Trả nợ', type: 'loan', color: '#8b5cf6', icon: 'CreditCard', isParent: true },
-  { id: 'loan-collect', name: 'Thu nợ', type: 'loan', color: '#8b5cf6', icon: 'Wallet', isParent: true },
-  { id: 'loan-borrow', name: 'Đi vay', type: 'loan', color: '#8b5cf6', icon: 'HandHeart', isParent: true },
+  { id: 'loan-lend', name: 'Cho vay', type: 'loan', color: '#8b5cf6', icon: '🤲', isParent: true },
+  { id: 'loan-repay', name: 'Trả nợ', type: 'loan', color: '#8b5cf6', icon: '💳', isParent: true },
+  { id: 'loan-collect', name: 'Thu nợ', type: 'loan', color: '#8b5cf6', icon: '👛', isParent: true },
+  { id: 'loan-borrow', name: 'Đi vay', type: 'loan', color: '#8b5cf6', icon: '🤝', isParent: true },
 ];
 
 // Custom Number Keyboard Component
@@ -113,7 +155,10 @@ export function TransactionModal({
   onSave, 
   categories,
   wallets,
-  transaction 
+  transaction,
+  onAddCategory,
+  onUpdateCategory,
+  onDeleteCategory
 }: TransactionModalProps) {
   const [currentView, setCurrentView] = useState<NavigationView>('main');
   const [showKeyboard, setShowKeyboard] = useState(false);
@@ -137,6 +182,28 @@ export function TransactionModal({
   const [showEditOptions, setShowEditOptions] = useState<string | null>(null);
 
   const amountInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper function to combine sample categories with user-created categories
+  const getAllCategories = () => {
+    return [...sampleCategories, ...categories];
+  };
+
+  // Ngăn body scroll khi modal mở
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+    } else {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+      document.body.style.touchAction = '';
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (transaction) {
@@ -174,24 +241,24 @@ export function TransactionModal({
     }
   }, [transaction, isOpen, wallets]);
 
-  // Reset form when switching to add-category view
+  // Reset form when switching to add-category view (only when first entering, not when coming back from parent picker)
   useEffect(() => {
-    if (currentView === 'add-category' && !selectedParentCategory) {
-      setNewCategoryName('');
-      setSelectedIcon('DollarSign');
-      setIsParentCategory(true);
-      setSelectedParentId('');
+    if (currentView === 'add-category' && !selectedParentCategory && !selectedParentId && isParentCategory) {
+      // Only reset if we're truly starting fresh (not coming back from parent picker)
+      if (newCategoryName === '') {
+        setSelectedIcon('DollarSign');
+      }
     }
-  }, [currentView, selectedParentCategory]);
+  }, [currentView, selectedParentCategory, selectedParentId, isParentCategory, newCategoryName]);
 
   // Get category type to determine transaction type
-  const selectedCategory = sampleCategories.find(cat => cat.id === formData.category);
+  const selectedCategory = getAllCategories().find(cat => cat.id === formData.category);
   const transactionType = selectedCategory?.type || 'expense';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.amount || !formData.category || !formData.description || !formData.walletId) {
+    if (!formData.amount || !formData.category || !formData.walletId) {
       alert('Vui lòng điền đầy đủ thông tin');
       return;
     }
@@ -225,11 +292,11 @@ export function TransactionModal({
 
   // Helper functions
   const getParentCategories = (type: 'expense' | 'income' | 'loan') => {
-    return sampleCategories.filter(cat => cat.type === type && cat.isParent);
+    return getAllCategories().filter(cat => cat.type === type && cat.isParent);
   };
 
   const getChildCategories = (parentId: string) => {
-    return sampleCategories.filter(cat => cat.parentId === parentId);
+    return getAllCategories().filter(cat => cat.parentId === parentId);
   };
 
   const getViewTitle = () => {
@@ -241,7 +308,8 @@ export function TransactionModal({
                                    selectedCategoryType === 'income' ? 'Khoản thu' : 'Vay/Nợ';
       case 'category-child': return selectedParentCategory?.name || 'Chọn danh mục';
       case 'add-category': return 'Thêm nhóm mới';
-      case 'date': return 'Chọn ngày';
+      case 'icon-picker': return 'Chọn biểu tượng';
+      case 'parent-category-picker': return 'Chọn nhóm cha';
       default: return 'Thêm giao dịch';
     }
   };
@@ -448,8 +516,13 @@ export function TransactionModal({
     };
     
     return (
-      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300 min-h-0">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2 min-h-0" 
+             style={{ 
+               WebkitOverflowScrolling: 'touch',
+               touchAction: 'pan-y',
+               overscrollBehavior: 'contain'
+             }}>
           {/* Nút thêm nhóm mới - chỉ hiển thị cho expense và income */}
           {selectedCategoryType !== 'loan' && (
             <div
@@ -572,8 +645,8 @@ export function TransactionModal({
     const childCategories = getChildCategories(selectedParentCategory.id);
     
     return (
-      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300 min-h-0">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
           {childCategories.map((category) => (
             <div
               key={category.id}
@@ -634,25 +707,39 @@ export function TransactionModal({
       if (!newCategoryName.trim()) return;
       
       if (isEditing && selectedParentCategory) {
-        // Trong thực tế sẽ gọi API để cập nhật
-        console.log('Cập nhật category:', {
-          id: selectedParentCategory.id,
+        // Cập nhật category
+        const iconEmoji = availableIcons.find(i => i.key === selectedIcon)?.icon || selectedIcon;
+        
+        const updatedCategory = {
+          ...selectedParentCategory,
           name: newCategoryName.trim(),
-          icon: selectedIcon,
-          isParent: isParentCategory,
-          parentId: isParentCategory ? undefined : selectedParentId || undefined
-        });
-      } else {
-        // Trong thực tế sẽ gọi API để tạo mới
-        const newCategory = {
-          id: Date.now().toString(),
-          name: newCategoryName.trim(),
-          type: selectedCategoryType!,
-          icon: selectedIcon,
-          color: selectedCategoryType === 'expense' ? '#ef4444' : '#22c55e',
+          icon: iconEmoji,
           isParent: isParentCategory,
           parentId: isParentCategory ? undefined : selectedParentId || undefined
         };
+        
+        if (onUpdateCategory) {
+          onUpdateCategory(updatedCategory);
+        }
+        console.log('Cập nhật category:', updatedCategory);
+      } else {
+        // Tạo category mới
+        const iconEmoji = availableIcons.find(i => i.key === selectedIcon)?.icon || selectedIcon;
+        
+        const newCategory: Category = {
+          id: `custom-${Date.now()}`,
+          name: newCategoryName.trim(),
+          type: selectedCategoryType!,
+          icon: iconEmoji,
+          color: selectedCategoryType === 'expense' ? '#ef4444' : 
+                 selectedCategoryType === 'income' ? '#22c55e' : '#8b5cf6',
+          isParent: isParentCategory,
+          parentId: isParentCategory ? undefined : selectedParentId || undefined
+        };
+        
+        if (onAddCategory) {
+          onAddCategory(newCategory);
+        }
         console.log('Tạo category mới:', newCategory);
       }
       
@@ -668,115 +755,227 @@ export function TransactionModal({
     return (
       <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
         <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          {/* Tên nhóm */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tên nhóm *
-            </label>
-            <input
-              type="text"
-              value={newCategoryName}
-              onChange={(e) => setNewCategoryName(e.target.value)}
-              placeholder="Nhập tên nhóm..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              autoFocus
-            />
-          </div>
-
-          {/* Chọn icon */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Chọn biểu tượng
-            </label>
-            <div className="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto">
-              {availableIcons.map((iconItem) => (
-                <button
-                  key={iconItem.key}
-                  onClick={() => setSelectedIcon(iconItem.key)}
-                  className={`p-3 rounded-lg border-2 transition-colors ${
-                    selectedIcon === iconItem.key 
-                      ? 'border-green-500 bg-green-50' 
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                  title={iconItem.name}
-                >
-                  <span className="text-xl">{iconItem.icon}</span>
-                </button>
-              ))}
+          
+          {/* Icon và Tên nhóm - nằm ngang */}
+          <div className="flex items-center space-x-3">
+            {/* Chọn Icon */}
+            <button
+              onClick={() => setCurrentView('icon-picker')}
+              className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center border-2 border-red-200 hover:border-red-300 transition-colors"
+            >
+              <span className="text-xl">
+                {availableIcons.find(i => i.key === selectedIcon)?.icon || selectedIcon}
+              </span>
+            </button>
+            
+            {/* Tên nhóm */}
+            <div className="flex-1">
+              <input
+                type="text"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                placeholder="Tên nhóm"
+                className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-green-500 focus:ring-0 text-lg bg-transparent"
+                autoFocus
+              />
             </div>
           </div>
 
-          {/* Loại nhóm */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Loại nhóm
-            </label>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setIsParentCategory(true)}
-                className={`flex-1 py-2 px-4 rounded-lg border ${
-                  isParentCategory 
-                    ? 'border-green-500 bg-green-50 text-green-700' 
-                    : 'border-gray-300 text-gray-600'
-                }`}
-              >
-                Nhóm cha
-              </button>
-              <button
-                onClick={() => setIsParentCategory(false)}
-                className={`flex-1 py-2 px-4 rounded-lg border ${
-                  !isParentCategory 
-                    ? 'border-green-500 bg-green-50 text-green-700' 
-                    : 'border-gray-300 text-gray-600'
-                }`}
-              >
-                Nhóm con
-              </button>
-            </div>
+          {/* Chọn loại - Khoản thu/chi */}
+          <div className="bg-gray-100 rounded-lg p-1 flex">
+            <button
+              onClick={() => setSelectedCategoryType('income')}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                selectedCategoryType === 'income'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Khoản thu
+            </button>
+            <button
+              onClick={() => setSelectedCategoryType('expense')}
+              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
+                selectedCategoryType === 'expense'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Khoản chi
+            </button>
           </div>
 
-          {/* Chọn nhóm cha (nếu là nhóm con) */}
-          {!isParentCategory && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Thuộc nhóm cha
-              </label>
-              <select
-                value={selectedParentId}
-                onChange={(e) => setSelectedParentId(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-              >
-                <option value="">Chọn nhóm cha</option>
-                {parentCategories.map((parent) => (
-                  <option key={parent.id} value={parent.id}>
-                    {parent.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
+          {/* Chọn nhóm cha */}
+          <div>
+            <button
+              onClick={() => setCurrentView('parent-category-picker')}
+              className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              <div className="flex items-center space-x-3">
+                <span className="text-gray-500">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                  </svg>
+                </span>
+                <div className="text-left">
+                  <p className="text-sm text-gray-500">Nhóm cha</p>
+                  <p className="text-gray-900">
+                    {isParentCategory 
+                      ? 'Không có (Nhóm cha mới)'
+                      : selectedParentId 
+                        ? parentCategories.find(p => p.id === selectedParentId)?.name || 'Chọn nhóm'
+                        : 'Chọn nhóm cha'
+                    }
+                  </p>
+                </div>
+              </div>
+              <ChevronRight className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+
         </div>
 
-        {/* Action buttons */}
+        {/* Nút lưu */}
         <div className="p-4 border-t border-gray-200">
-          <div className="flex gap-3">
-            <button
-              onClick={() => {
-                setSelectedParentCategory(null);
-                setCurrentView('category-parent');
-              }}
-              className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium"
-            >
-              Hủy
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!newCategoryName.trim() || (!isParentCategory && !selectedParentId)}
-              className="flex-1 py-3 bg-green-600 text-white rounded-lg font-medium disabled:bg-gray-300"
-            >
-              {isEditing ? 'Cập nhật' : 'Lưu'}
-            </button>
+          <Button 
+            onClick={handleSave}
+            disabled={!newCategoryName.trim() || !selectedCategoryType}
+            className="w-full"
+          >
+            {isEditing 
+              ? 'Cập nhật' 
+              : isParentCategory 
+                ? 'Tạo nhóm cha' 
+                : 'Tạo nhóm con'
+            }
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal chọn icon
+  const renderIconPicker = () => {
+    const availableIcons = [
+      { key: 'DollarSign', icon: '💲', name: 'Tiền' },
+      { key: 'Receipt', icon: '🧾', name: 'Hóa đơn' },
+      { key: 'Home', icon: '🏠', name: 'Nhà' },
+      { key: 'Car', icon: '🚗', name: 'Xe' },
+      { key: 'ShoppingBag', icon: '🛍️', name: 'Mua sắm' },
+      { key: 'UtensilsCrossed', icon: '🍽️', name: 'Ăn uống' },
+      { key: 'Fuel', icon: '⛽', name: 'Xăng' },
+      { key: 'Phone', icon: '📱', name: 'Điện thoại' },
+      { key: 'Zap', icon: '⚡', name: 'Điện' },
+      { key: 'Droplets', icon: '💧', name: 'Nước' },
+      { key: 'Wifi', icon: '📶', name: 'Internet' },
+      { key: 'Tv', icon: '📺', name: 'TV' },
+      { key: 'User', icon: '👤', name: 'Cá nhân' },
+      { key: 'Sparkles', icon: '✨', name: 'Làm đẹp' },
+      { key: 'Coffee', icon: '☕', name: 'Cà phê' },
+      { key: 'Gift', icon: '🎁', name: 'Quà tặng' },
+      { key: 'PiggyBank', icon: '🐷', name: 'Tiết kiệm' },
+      { key: 'TrendingUp', icon: '📈', name: 'Đầu tư' },
+      { key: 'Apple', icon: '🍎', name: 'Thực phẩm' },
+      { key: 'Heart', icon: '❤️', name: 'Yêu thích' },
+      { key: 'Star', icon: '⭐', name: 'Đặc biệt' },
+      { key: 'Shield', icon: '🛡️', name: 'Bảo hiểm' },
+      { key: 'Graduation', icon: '🎓', name: 'Học tập' },
+      { key: 'Hospital', icon: '🏥', name: 'Y tế' },
+      { key: 'Plane', icon: '✈️', name: 'Du lịch' },
+      { key: 'Music', icon: '🎵', name: 'Âm nhạc' },
+      { key: 'Camera', icon: '📷', name: 'Nhiếp ảnh' },
+      { key: 'Gamepad', icon: '🎮', name: 'Game' },
+      { key: 'Book', icon: '📚', name: 'Sách' },
+      { key: 'Shirt', icon: '👕', name: 'Quần áo' },
+      { key: 'Shoe', icon: '👟', name: 'Giày dép' },
+      { key: 'Watch', icon: '⌚', name: 'Đồng hồ' },
+      { key: 'Banknote', icon: '💵', name: 'Tiền mặt' },
+      { key: 'CreditCard', icon: '💳', name: 'Thẻ tín dụng' },
+      { key: 'Wallet', icon: '👛', name: 'Ví' },
+    ];
+
+    return (
+      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
+        <div className="flex-1 overflow-y-auto p-4">
+          <div className="grid grid-cols-6 gap-3">
+            {availableIcons.map((iconItem) => (
+              <button
+                key={iconItem.key}
+                onClick={() => {
+                  setSelectedIcon(iconItem.key);
+                  setCurrentView('add-category');
+                }}
+                className={`p-4 rounded-xl border-2 transition-colors ${
+                  selectedIcon === iconItem.key 
+                    ? 'border-green-500 bg-green-50' 
+                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                <span className="text-2xl">{iconItem.icon}</span>
+              </button>
+            ))}
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Modal chọn nhóm cha  
+  const renderParentCategoryPicker = () => {
+    const parentCategories = selectedCategoryType ? getParentCategories(selectedCategoryType) : [];
+    
+    return (
+      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {/* Option không chọn nhóm cha (tạo nhóm cha mới) */}
+          <button
+            onClick={() => {
+              setSelectedParentId('');
+              setIsParentCategory(true);
+              setCurrentView('add-category');
+            }}
+            className={`w-full flex items-center space-x-3 p-4 rounded-xl border-2 transition-colors ${
+              selectedParentId === ''
+                ? 'border-green-500 bg-green-50'
+                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+            }`}
+          >
+            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+              <span className="text-lg">➕</span>
+            </div>
+            <div className="text-left">
+              <p className="font-medium">Tạo nhóm cha mới</p>
+              <p className="text-sm text-gray-500">Không thuộc nhóm nào</p>
+            </div>
+          </button>
+
+          {/* Danh sách nhóm cha hiện có */}
+          {parentCategories.map((parent) => (
+            <button
+              key={parent.id}
+              onClick={() => {
+                setSelectedParentId(parent.id);
+                setIsParentCategory(false);
+                setCurrentView('add-category');
+              }}
+              className={`w-full flex items-center space-x-3 p-4 rounded-xl border-2 transition-colors ${
+                selectedParentId === parent.id
+                  ? 'border-green-500 bg-green-50'
+                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+              }`}
+            >
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: parent.color + '20' }}
+              >
+                <span className="text-lg">{getCategoryIcon(parent.icon)}</span>
+              </div>
+              <div className="text-left">
+                <p className="font-medium">{parent.name}</p>
+                <p className="text-sm text-gray-500">Tạo mục con</p>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
     );
@@ -784,21 +983,12 @@ export function TransactionModal({
 
   // Helper function to get category icons
   const getCategoryIcon = (icon: string): string => {
-    const iconMap: { [key: string]: string } = {
-      Receipt: '🧾', Home: '🏠', Zap: '⚡', Droplets: '💧', Wifi: '📶',
-      Phone: '📱', Flame: '🔥', Tv: '📺', ShoppingBag: '🛍️', User: '👤',
-      Sparkles: '✨', Car: '🚗', Fuel: '⛽', Wrench: '🔧', ParkingCircle: '🅿️',
-      UtensilsCrossed: '🍽️', ChefHat: '👨‍🍳', Pizza: '🍕', Coffee: '☕',
-      Banknote: '💵', TrendingUp: '📈', PiggyBank: '🐷', Gift: '🎁',
-      HandCoins: '🤲', CreditCard: '💳', Wallet: '👛', HandHeart: '🤝',
-      DollarSign: '💲'
-    };
-    return iconMap[icon] || '💰';
+    return icon || '💰';
   };
 
   const renderCategorySelection = () => (
-    <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+    <div className="h-full flex flex-col animate-in slide-in-from-right duration-300 min-h-0">
+      <div className="flex-1 overflow-y-auto overscroll-contain p-4 space-y-2 min-h-0" style={{ WebkitOverflowScrolling: 'touch' }}>
         {categories.map((category) => (
           <div
             key={category.id}
@@ -813,7 +1003,7 @@ export function TransactionModal({
                 className="w-12 h-12 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: category.color + '20' }}
               >
-                <span className="text-xl">{category.icon}</span>
+                <span className="text-xl">{getCategoryIcon(category.icon)}</span>
               </div>
               <div>
                 <p className="font-medium text-gray-900">{category.name}</p>
@@ -825,24 +1015,6 @@ export function TransactionModal({
             )}
           </div>
         ))}
-      </div>
-    </div>
-  );
-
-  const renderDateSelection = () => (
-    <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-      <div className="flex-1 p-4">
-        <div className="space-y-4">
-          <input
-            type="date"
-            value={formData.date}
-            onChange={(e) => {
-              handleChange('date', e.target.value);
-              setCurrentView('main');
-            }}
-            className="w-full p-4 bg-gray-50 border-none rounded-xl text-gray-900 focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
       </div>
     </div>
   );
@@ -928,13 +1100,13 @@ export function TransactionModal({
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-gray-600 text-sm">
                   {formData.category 
-                    ? getCategoryIcon(sampleCategories.find(c => c.id === formData.category)?.icon || '')
+                    ? getCategoryIcon(getAllCategories().find(c => c.id === formData.category)?.icon || '')
                     : '≡'}
                 </span>
               </div>
               <span className="text-gray-500">
                 {formData.category 
-                  ? sampleCategories.find(c => c.id === formData.category)?.name 
+                  ? getAllCategories().find(c => c.id === formData.category)?.name 
                   : 'Chọn nhóm'}
               </span>
             </div>
@@ -951,21 +1123,26 @@ export function TransactionModal({
             onFocus={() => setShowKeyboard(false)}
             className="w-full bg-gray-50 border-none rounded-xl p-4 text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-200"
             placeholder="Ghi chú"
-            required
           />
         </div>
 
         {/* Date Selection */}
         <div className="space-y-3">
-          <div 
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200"
-            onClick={() => setCurrentView('date')}
-          >
-            <div className="flex items-center space-x-3">
-              <Calendar size={20} className="text-gray-600" />
-              <span className="text-gray-900">{formatDate(formData.date)}</span>
+          <div className="relative">
+            <input
+              ref={dateInputRef}
+              type="date"
+              value={formData.date}
+              onChange={(e) => handleChange('date', e.target.value)}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200 pointer-events-none">
+              <div className="flex items-center space-x-3">
+                <Calendar size={20} className="text-gray-600" />
+                <span className="text-gray-900">{formatDate(formData.date)}</span>
+              </div>
+              <ChevronRight size={16} className="text-gray-400" />
             </div>
-            <ChevronRight size={16} className="text-gray-400" />
           </div>
         </div>
       </form>
@@ -989,7 +1166,8 @@ export function TransactionModal({
       case 'category-parent': return renderCategoryParentSelection();
       case 'category-child': return renderCategoryChildSelection();
       case 'add-category': return renderAddCategoryForm();
-      case 'date': return renderDateSelection();
+      case 'icon-picker': return renderIconPicker();
+      case 'parent-category-picker': return renderParentCategoryPicker();
       default: return renderMainForm();
     }
   };
@@ -997,10 +1175,17 @@ export function TransactionModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-16 animate-in fade-in duration-200">
-      <div className="bg-white rounded-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ease-out">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-16 animate-in fade-in duration-200" 
+         style={{ 
+           touchAction: 'none',
+           overscrollBehavior: 'none'
+         }}>
+      <div className="bg-white rounded-2xl w-full max-w-md h-[600px] flex flex-col overflow-hidden animate-in slide-in-from-bottom duration-300 ease-out" 
+           style={{ 
+             touchAction: 'auto'
+           }}>
         {renderHeader()}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden min-h-0">
           {renderCurrentView()}
         </div>
       </div>

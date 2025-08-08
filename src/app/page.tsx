@@ -6,15 +6,15 @@ import { useTransactions, useCategories, useWallets } from '@/hooks/useStorage';
 import { TransactionItem } from '@/components/TransactionItem';
 import { TransactionModal } from '@/components/TransactionModal';
 import { TransactionsPage } from '@/components/TransactionsPage';
-import { StatsPage } from '@/components/StatsPage';
+import { SettingsPage } from '@/components/SettingsPage';
 import { BudgetPage } from '@/components/BudgetPage';
 import { WalletsPage } from '@/components/WalletsPage';
 import { ExpenseChart } from '@/components/ExpenseChart';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { groupTransactionsByDate, formatCurrency, calculateBalance, calculateTotalByType, formatDate, formatDetailedDate } from '@/lib/utils';
-import { Home, BarChart3, History, Target } from 'lucide-react';
+import { Home, BarChart3, History, Settings } from 'lucide-react';
 
-type TabType = 'home' | 'transactions' | 'stats' | 'budget' | 'wallets';
+type TabType = 'home' | 'transactions' | 'stats' | 'settings';
 
 export default function HomePage() {
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -24,7 +24,7 @@ export default function HomePage() {
   const [timePeriod, setTimePeriod] = useState<'current' | 'threeMonthsAgo'>('current');
 
   const { transactions, loading, addTransaction, updateTransaction, deleteTransaction } = useTransactions();
-  const { categories } = useCategories();
+  const { categories, addCategory, updateCategory, deleteCategory } = useCategories();
   const { wallets, addWallet, updateWallet, deleteWallet } = useWallets();  const handleSaveTransaction = (transaction: Transaction) => {
     if (editingTransaction) {
       updateTransaction(transaction.id, transaction);
@@ -258,12 +258,12 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 pb-20">
       {/* Header */}
-      {activeTab !== 'home' && activeTab !== 'transactions' && (
+      {(activeTab === 'stats' || activeTab === 'settings') && (
         <div className="bg-white shadow-sm">
           <div className="px-4 py-4">
             <h1 className="text-xl font-bold text-gray-900">
-              {activeTab === 'stats' && 'Thống kê'}
-              {activeTab === 'budget' && 'Ngân sách'}
+              {activeTab === 'stats' && 'Ngân sách'}
+              {activeTab === 'settings' && 'Cài đặt'}
             </h1>
           </div>
         </div>
@@ -273,8 +273,7 @@ export default function HomePage() {
       <div className="flex-1">
         {activeTab === 'home' && (
           <div className="p-4 space-y-6">
-            {/* Tổng số dư */}0
-            
+            {/* Tổng số dư */}
             <div className="bg-white rounded-xl shadow-sm p-4">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Tổng số dư</span>
@@ -294,7 +293,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between p-4 border-b border-gray-100">
                 <h3 className="text-lg font-semibold text-gray-900">Ví của Nannie</h3>
                 <button 
-                  onClick={() => setActiveTab('wallets')}
+                  onClick={() => setActiveTab('settings')}
                   className="text-green-600 text-sm hover:text-green-700"
                 >
                   Xem tất cả
@@ -322,7 +321,7 @@ export default function HomePage() {
                     {wallets.length > 3 && (
                       <div className="text-center pt-2">
                         <button
-                          onClick={() => setActiveTab('wallets')}
+                          onClick={() => setActiveTab('settings')}
                           className="text-sm text-gray-500 hover:text-gray-700"
                         >
                           +{wallets.length - 3} ví khác
@@ -334,7 +333,7 @@ export default function HomePage() {
                   <div className="text-center py-4">
                     <p className="text-gray-500 mb-2">Chưa có ví nào</p>
                     <button
-                      onClick={() => setActiveTab('wallets')}
+                      onClick={() => setActiveTab('settings')}
                       className="text-blue-600 text-sm hover:text-blue-700"
                     >
                       Tạo ví đầu tiên
@@ -554,57 +553,53 @@ export default function HomePage() {
 
         {activeTab === 'stats' && <BudgetPage transactions={transactions} />}
         
-        {activeTab === 'budget' && <StatsPage transactions={transactions} />}
-
-        {activeTab === 'wallets' && (
-          <WalletsPage
+        {activeTab === 'settings' && (
+          <SettingsPage 
+            categories={categories}
             wallets={wallets}
-            onCreateWallet={handleCreateWallet}
-            onUpdateWallet={handleUpdateWallet}
-            onDeleteWallet={handleDeleteWallet}
-            onSelectWallet={handleSelectWallet}
-            onBack={() => setActiveTab('home')}
+            addCategory={addCategory}
+            updateCategory={updateCategory}
+            deleteCategory={deleteCategory}
+            addWallet={addWallet}
+            updateWallet={handleUpdateWallet}
+            deleteWallet={handleDeleteWallet}
           />
         )}
       </div>
 
       {/* Bottom Navigation */}
-      {activeTab !== 'wallets' && (
-        <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-          <div className="flex py-2">
-            <TabButton
-              tab="home"
-              icon={<Home size={20} />}
-              label="Tổng quan"
-            />
-            <TabButton
-              tab="transactions"
-              icon={<History size={20} />}
-              label="Số giao dịch"
-            />
-            <TabButton
-              tab="stats"
-              icon={<BarChart3 size={20} />}
-              label="Ngân sách"
-            />
-            <TabButton
-              tab="budget"
-              icon={<Target size={20} />}
-              label="Thống kê"
-            />
-          </div>
-          {/* Extended white background to fill bottom gap */}
-          <div className="h-4 bg-white"></div>
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+        <div className="flex py-2">
+          <TabButton
+            tab="home"
+            icon={<Home size={20} />}
+            label="Tổng quan"
+          />
+          <TabButton
+            tab="transactions"
+            icon={<History size={20} />}
+            label="Số giao dịch"
+          />
+          <TabButton
+            tab="stats"
+            icon={<BarChart3 size={20} />}
+            label="Ngân sách"
+          />
+          <TabButton
+            tab="settings"
+            icon={<Settings size={20} />}
+            label="Cài đặt"
+          />
         </div>
-      )}
+        {/* Extended white background to fill bottom gap */}
+        <div className="h-4 bg-white"></div>
+      </div>
 
       {/* Floating Action Button */}
-      {activeTab !== 'wallets' && (
-        <FloatingActionButton
-          onClick={() => setIsModalOpen(true)}
-          className="mb-20"
-        />
-      )}
+      <FloatingActionButton
+        onClick={() => setIsModalOpen(true)}
+        className="mb-20"
+      />
 
       {/* Transaction Modal */}
       <TransactionModal
@@ -614,6 +609,9 @@ export default function HomePage() {
         categories={categories}
         wallets={wallets}
         transaction={editingTransaction}
+        onAddCategory={addCategory}
+        onUpdateCategory={updateCategory}
+        onDeleteCategory={deleteCategory}
       />
     </div>
   );

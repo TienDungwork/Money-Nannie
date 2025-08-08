@@ -131,7 +131,10 @@ export function useCategories() {
   useEffect(() => {
     const loadCategories = () => {
       try {
+        // Đảm bảo initialize default data trước
+        storageService.initializeDefaultData();
         const savedCategories = storageService.getCategories();
+        console.log('Loaded categories:', savedCategories);
         setCategories(savedCategories);
       } catch (error) {
         console.error('Error loading categories:', error);
@@ -141,7 +144,43 @@ export function useCategories() {
     loadCategories();
   }, []);
 
-  return { categories };
+  const addCategory = (category: Omit<Category, 'id'>) => {
+    try {
+      const newCategory = storageService.addCategory(category);
+      setCategories(prev => [...prev, newCategory]);
+      return newCategory;
+    } catch (error) {
+      console.error('Error adding category:', error);
+      return null;
+    }
+  };
+
+  const updateCategory = (id: string, updatedData: Partial<Category>) => {
+    try {
+      storageService.updateCategory(id, updatedData);
+      setCategories(prev => 
+        prev.map(c => c.id === id ? { ...c, ...updatedData } : c)
+      );
+    } catch (error) {
+      console.error('Error updating category:', error);
+    }
+  };
+
+  const deleteCategory = (id: string) => {
+    try {
+      storageService.deleteCategory(id);
+      setCategories(prev => prev.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  return { 
+    categories, 
+    addCategory,
+    updateCategory,
+    deleteCategory
+  };
 }
 
 export function useWallets() {
