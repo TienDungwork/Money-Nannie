@@ -6,7 +6,7 @@ const STORAGE_KEYS = {
   WALLETS: 'expense-tracker-wallets',
 } as const;
 
-// Không sử dụng defaultCategories nữa - sử dụng sampleCategories từ TransactionModal
+// Categories đã được chuyển sang sử dụng sampleCategories từ defaultCategories.ts
 export const defaultCategories: Category[] = [];
 
 export const defaultWallets: Wallet[] = [

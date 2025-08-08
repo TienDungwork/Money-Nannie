@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Category, Wallet } from '@/types';
 import { CategoryManager } from './CategoryManager';
 import { ChevronRight, Plus, Edit, Trash2 } from 'lucide-react';
+import { getAllCategories } from '@/lib/defaultCategories';
 
 interface SettingsPageProps {
   categories: Category[];
@@ -113,8 +114,11 @@ export function SettingsPage({
     }).format(amount);
   };
 
-  const expenseCategories = categories.filter(cat => cat.type === 'expense');
-  const incomeCategories = categories.filter(cat => cat.type === 'income');
+  // Sử dụng getAllCategories để kết hợp sample và user categories
+  const allCategories = getAllCategories(categories);
+  const expenseCategories = allCategories.filter(cat => cat.type === 'expense');
+  const incomeCategories = allCategories.filter(cat => cat.type === 'income');
+  const loanCategories = allCategories.filter(cat => cat.type === 'loan');
 
   return (
     <div className="flex flex-col h-full bg-gray-50">
@@ -217,7 +221,6 @@ export function SettingsPage({
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium text-gray-900">Khoản chi</h3>
-                  <span className="text-sm text-gray-500">{expenseCategories.length} nhóm</span>
                 </div>
                 <div className="space-y-2">
                   {expenseCategories.slice(0, 5).map((category) => (
@@ -238,7 +241,6 @@ export function SettingsPage({
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="font-medium text-gray-900">Khoản thu</h3>
-                  <span className="text-sm text-gray-500">{incomeCategories.length} nhóm</span>
                 </div>
                 <div className="space-y-2">
                   {incomeCategories.slice(0, 5).map((category) => (
@@ -250,6 +252,26 @@ export function SettingsPage({
                   {incomeCategories.length > 5 && (
                     <p className="text-sm text-gray-500 mt-2">
                       +{incomeCategories.length - 5} nhóm khác
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Loan Categories */}
+              <div className="bg-white rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-gray-900">Vay/Nợ</h3>
+                </div>
+                <div className="space-y-2">
+                  {loanCategories.slice(0, 5).map((category) => (
+                    <div key={category.id} className="flex items-center space-x-3">
+                      <span className="text-lg">{category.icon}</span>
+                      <span className="text-sm text-gray-700">{category.name}</span>
+                    </div>
+                  ))}
+                  {loanCategories.length > 5 && (
+                    <p className="text-sm text-gray-500 mt-2">
+                      +{loanCategories.length - 5} nhóm khác
                     </p>
                   )}
                 </div>

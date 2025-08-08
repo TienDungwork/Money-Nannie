@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Category } from '@/types';
 import { IconPicker } from '@/components/IconPicker';
 import { ChevronRight, Plus, Edit, Trash2, X, ArrowLeft } from 'lucide-react';
+import { getAllCategories, getParentCategories, getChildCategories, isSampleCategory } from '@/lib/defaultCategories';
 
 type NavigationView = 'main' | 'category-type' | 'category-parent' | 'category-child' | 'add-category';
 
@@ -42,14 +43,7 @@ export function CategoryManager({
     parentId: '',
   });
 
-  // Helper functions
-  const getParentCategories = (type: 'expense' | 'income' | 'loan') => {
-    return categories.filter(cat => cat.type === type && cat.isParent);
-  };
-
-  const getChildCategories = (parentId: string) => {
-    return categories.filter(cat => cat.parentId === parentId);
-  };
+  // Helper functions đã được thay thế bằng import từ shared lib
 
   const getCategoryIcon = (icon: string): string => {
     const iconMap: { [key: string]: string } = {
@@ -124,6 +118,12 @@ export function CategoryManager({
   };
 
   const handleEdit = (category: Category) => {
+    // Không cho phép edit sample categories
+    if (isSampleCategory(category.id)) {
+      alert('Không thể sửa đổi nhóm mặc định của hệ thống');
+      return;
+    }
+    
     setEditingCategory(category);
     setFormData({
       name: category.name,
@@ -136,6 +136,12 @@ export function CategoryManager({
   };
 
   const handleDelete = (categoryId: string) => {
+    // Không cho phép delete sample categories
+    if (isSampleCategory(categoryId)) {
+      alert('Không thể xóa nhóm mặc định của hệ thống');
+      return;
+    }
+    
     if (confirm('Bạn có chắc muốn xóa danh mục này?')) {
       if (deleteCategory) {
         deleteCategory(categoryId);
@@ -170,9 +176,6 @@ export function CategoryManager({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {categories.filter(c => c.type === 'expense').length} mục
-          </span>
           <ChevronRight size={20} className="text-gray-400" />
         </div>
       </div>
@@ -195,9 +198,6 @@ export function CategoryManager({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {categories.filter(c => c.type === 'income').length} mục
-          </span>
           <ChevronRight size={20} className="text-gray-400" />
         </div>
       </div>
@@ -220,9 +220,6 @@ export function CategoryManager({
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <span className="text-sm text-gray-500">
-            {categories.filter(c => c.type === 'loan').length} mục
-          </span>
           <ChevronRight size={20} className="text-gray-400" />
         </div>
       </div>
@@ -232,7 +229,7 @@ export function CategoryManager({
   const renderCategoryParentSelection = () => {
     if (!selectedCategoryType) return null;
     
-    const parentCategories = getParentCategories(selectedCategoryType);
+    const parentCategories = getParentCategories(selectedCategoryType, categories);
     
     return (
       <div className="space-y-3">
@@ -261,7 +258,7 @@ export function CategoryManager({
 
         {/* Danh sách nhóm cha */}
         {parentCategories.map((category) => {
-          const children = getChildCategories(category.id);
+          const children = getChildCategories(category.id, categories);
           
           return (
             <div key={category.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -282,18 +279,15 @@ export function CategoryManager({
                     className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: category.color + '20' }}
                   >
-                    <span className="text-lg">{getCategoryIcon(category.icon)}</span>
+                    <span className="text-lg">{category.icon}</span>
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">{category.name}</p>
-                    {children.length > 0 && (
-                      <p className="text-xs text-gray-500">{children.length} danh mục con</p>
-                    )}
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {mode === 'management' && (
+                  {mode === 'management' && !isSampleCategory(category.id) && (
                     <div className="flex space-x-1">
                       <button
                         onClick={(e) => {
@@ -327,18 +321,12 @@ export function CategoryManager({
                       className="w-6 h-6 rounded-full flex items-center justify-center"
                       style={{ backgroundColor: child.color + '20' }}
                     >
-                      <span className="text-xs">{getCategoryIcon(child.icon)}</span>
+                      <span className="text-xs">{child.icon}</span>
                     </div>
                     <p className="text-sm text-gray-700">{child.name}</p>
                   </div>
                 </div>
               ))}
-              
-              {children.length > 2 && (
-                <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-                  <p className="text-xs text-gray-500 ml-10">+{children.length - 2} mục khác</p>
-                </div>
-              )}
             </div>
           );
         })}
@@ -371,7 +359,7 @@ export function CategoryManager({
   const renderCategoryChildSelection = () => {
     if (!selectedParentCategory) return null;
     
-    const children = getChildCategories(selectedParentCategory.id);
+    const children = getChildCategories(selectedParentCategory.id, categories);
     
     return (
       <div className="space-y-3">
@@ -390,7 +378,7 @@ export function CategoryManager({
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ backgroundColor: selectedParentCategory.color + '20' }}
             >
-              <span className="text-lg">{getCategoryIcon(selectedParentCategory.icon)}</span>
+              <span className="text-lg">{selectedParentCategory.icon}</span>
             </div>
             <div>
               <p className="font-medium text-gray-900">{selectedParentCategory.name}</p>
@@ -439,12 +427,12 @@ export function CategoryManager({
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: child.color + '20' }}
               >
-                <span className="text-sm">{getCategoryIcon(child.icon)}</span>
+                <span className="text-sm">{child.icon}</span>
               </div>
               <p className="text-sm text-gray-800">{child.name}</p>
             </div>
             
-            {mode === 'management' && (
+            {mode === 'management' && !isSampleCategory(child.id) && (
               <div className="flex space-x-1">
                 <button
                   onClick={(e) => {
@@ -552,7 +540,7 @@ export function CategoryManager({
             className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg appearance-none bg-white"
           >
             <option value="">Tạo nhóm cha mới</option>
-            {getParentCategories(formData.type).map((parent) => (
+            {getParentCategories(formData.type, categories).map((parent) => (
               <option key={parent.id} value={parent.id}>
                 {parent.name}
               </option>
