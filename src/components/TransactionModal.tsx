@@ -75,12 +75,14 @@ export function TransactionModal({
 }: TransactionModalProps) {
   const [currentView, setCurrentView] = useState<NavigationView>('main');
   const [showKeyboard, setShowKeyboard] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     category: '',
     description: '',
     walletId: '',
     date: new Date().toISOString().split('T')[0],
+    withPerson: '',
   });
 
   // Category navigation states
@@ -112,13 +114,16 @@ export function TransactionModal({
 
   useEffect(() => {
     if (transaction) {
+      const defaultWallet = wallets.find(w => w.isDefault) || wallets[0];
       setFormData({
         amount: transaction.amount.toString(),
         category: transaction.category,
         description: transaction.description,
-        walletId: (transaction as any).walletId || '',
+        walletId: transaction.walletId || defaultWallet?.id || '',
         date: transaction.date,
+        withPerson: transaction.withPerson || '',
       });
+      setShowDetails(!!transaction.withPerson);
     } else {
       // Set default wallet
       const defaultWallet = wallets.find(w => w.isDefault) || wallets[0];
@@ -128,7 +133,9 @@ export function TransactionModal({
         description: '',
         walletId: defaultWallet?.id || '',
         date: new Date().toISOString().split('T')[0],
+        withPerson: '',
       });
+      setShowDetails(false);
     }
     
     // Reset view when modal opens/closes
@@ -138,14 +145,16 @@ export function TransactionModal({
       // Reset category form states
       setSelectedCategoryType(null);
       setSelectedParentCategory(null);
+    } else {
+      setShowDetails(false);
     }
   }, [transaction, isOpen, wallets]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.amount || !formData.category || !formData.walletId) {
-      alert('Vui lòng điền đầy đủ thông tin');
+    if (!formData.amount || !formData.category || !formData.walletId.trim()) {
+      alert('Vui lòng điền đầy đủ thông tin và chọn ví');
       return;
     }
 
@@ -157,8 +166,9 @@ export function TransactionModal({
       description: formData.description,
       date: formData.date,
       createdAt: transaction?.createdAt || new Date().toISOString(),
-      walletId: formData.walletId,
-    } as Transaction;
+      walletId: formData.walletId.trim(),
+      withPerson: formData.withPerson.trim() || undefined,
+    };
 
     onSave(newTransaction);
     onClose();
@@ -172,7 +182,9 @@ export function TransactionModal({
         description: '',
         walletId: defaultWallet?.id || '',
         date: new Date().toISOString().split('T')[0],
+        withPerson: '',
       });
+      setShowDetails(false);
     }
   };
 
@@ -610,6 +622,51 @@ export function TransactionModal({
               <ChevronRight size={16} className="text-gray-400" />
             </div>
           </div>
+        </div>
+
+        {/* Add Details Button or With Person Input */}
+        <div className="space-y-3">
+          {!showDetails ? (
+            <button
+              type="button"
+              onClick={() => setShowDetails(true)}
+              className="w-full text-center py-3 text-green-600 font-medium hover:text-green-700 transition-colors duration-200"
+            >
+              Thêm chi tiết
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200">
+                <div className="flex items-center space-x-3 flex-1">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.withPerson}
+                    onChange={(e) => handleChange('withPerson', e.target.value)}
+                    onFocus={() => setShowKeyboard(false)}
+                    className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-500"
+                    placeholder="Với ai"
+                  />
+                </div>
+                {formData.withPerson && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleChange('withPerson', '');
+                      setShowDetails(false);
+                    }}
+                    className="ml-2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={16} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </form>
 

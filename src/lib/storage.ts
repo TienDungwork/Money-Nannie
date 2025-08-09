@@ -179,8 +179,11 @@ class LocalStorageService {
   initializeDefaultData(): void {
     if (typeof window === 'undefined') return;
     
-    // Force reset categories to new version (remove this after everyone has updated)
-    this.resetCategories();
+    // Initialize categories if not exists
+    const existingCategories = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
+    if (!existingCategories) {
+      this.saveCategories(defaultCategories);
+    }
     
     // Initialize wallets if not exists
     const existingWallets = localStorage.getItem(STORAGE_KEYS.WALLETS);

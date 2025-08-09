@@ -6,7 +6,7 @@ export interface Transaction {
   description: string;
   date: string;
   createdAt: string;
-  walletId?: string; // ID của ví được sử dụng
+  walletId: string; // ID của ví được sử dụng - bắt buộc
   withPerson?: string; // Tên người đi cùng/giao dịch cùng
   note?: string; // Ghi chú thêm
 }

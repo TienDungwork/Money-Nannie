@@ -5,6 +5,8 @@ export interface Budget {
   amount: number;
   spent: number;
   period: 'monthly' | 'weekly' | 'yearly';
+  startDate?: string;
+  endDate?: string;
   createdAt: string;
 }
 

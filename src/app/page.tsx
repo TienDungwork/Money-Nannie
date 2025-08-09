@@ -3,15 +3,16 @@
 import { useState, useEffect } from 'react';
 import { Transaction, Wallet, Category } from '@/types';
 import { useTransactions, useCategories, useWallets } from '@/hooks/useStorage';
-import { TransactionItem } from '@/components/TransactionItem';
 import { TransactionModal } from '@/components/TransactionModal';
 import { TransactionsPage } from '@/components/TransactionsPage';
 import { SettingsPage } from '@/components/SettingsPage';
 import { BudgetPage } from '@/components/BudgetPage';
 import { WalletsPage } from '@/components/WalletsPage';
 import { ExpenseChart } from '@/components/ExpenseChart';
+import { TopExpensesWidget } from '@/components/TopExpensesWidget';
 import { FloatingActionButton } from '@/components/ui/FloatingActionButton';
 import { groupTransactionsByDate, formatCurrency, calculateBalance, calculateTotalByType, formatDate, formatDetailedDate } from '@/lib/utils';
+import { getWalletIcon } from '@/lib/helpers';
 import { Home, BarChart3, History, Settings } from 'lucide-react';
 
 type TabType = 'home' | 'transactions' | 'stats' | 'settings';
@@ -68,54 +69,41 @@ export default function HomePage() {
   };
 
   const totalWalletBalance = wallets.reduce((total, wallet) => total + wallet.balance, 0);
+  const transactionBalance = calculateBalance(transactions);
   const defaultWallet = wallets.find(w => w.isDefault) || wallets[0];
 
   const recentTransactions = transactions.slice(0, 10);
   const groupedTransactions = groupTransactionsByDate(transactions);
 
-  // Tính danh mục chi tiêu nhiều nhất
-  const getTopExpenseCategory = (days: number) => {
-    const currentMonth = new Date().toISOString().slice(0, 7);
-    let filteredTransactions;
+  // Function để sync số dư ví với transactions
+  const syncWalletBalances = () => {
+    console.log('🔄 Manual sync wallet balances...');
+    const walletBalances: { [key: string]: number } = {};
     
-    if (days === 7) {
-      // Tuần này - lấy 7 ngày gần nhất
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - 7);
-      filteredTransactions = transactions.filter(t => 
-        t.type === 'expense' && 
-        new Date(t.date) >= cutoffDate
-      );
-    } else {
-      // Tháng này - lấy tất cả giao dịch trong tháng hiện tại
-      filteredTransactions = transactions.filter(t => 
-        t.type === 'expense' && 
-        t.date.startsWith(currentMonth)
-      );
-    }
-    
-    // Tính tổng chi tiêu theo từng danh mục
-    const categoryTotals: { [key: string]: number } = {};
-    let totalExpense = 0;
-    
-    filteredTransactions.forEach(t => {
-      categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
-      totalExpense += t.amount;
+    // Tính số dự từ transactions
+    transactions.forEach(transaction => {
+      if (transaction.walletId.trim() !== '') {
+        if (!walletBalances[transaction.walletId]) {
+          walletBalances[transaction.walletId] = 0;
+        }
+        const change = transaction.type === 'income' 
+          ? transaction.amount 
+          : -transaction.amount;
+        walletBalances[transaction.walletId] += change;
+      }
     });
-    
-    // Tìm danh mục có tổng chi tiêu cao nhất
-    const topCategory = Object.entries(categoryTotals)
-      .sort(([,a], [,b]) => b - a)[0];
-    
-    return topCategory ? {
-      category: topCategory[0],
-      amount: topCategory[1],
-      percentage: totalExpense > 0 ? (topCategory[1] / totalExpense) * 100 : 0
-    } : null;
-  };
 
-  const topWeekExpense = getTopExpenseCategory(7);
-  const topMonthExpense = getTopExpenseCategory(30);
+    console.log('💰 Calculated balances:', walletBalances);
+    console.log('🏦 Current wallet balances:', wallets.map(w => ({ name: w.name, balance: w.balance })));
+
+    // Cập nhật wallets
+    wallets.forEach(wallet => {
+      const calculatedBalance = walletBalances[wallet.id] || 0;
+      if (Math.abs(wallet.balance - calculatedBalance) > 0.01) {
+        updateWallet(wallet.id, { balance: calculatedBalance });
+      }
+    });
+  };
 
   // Function để tính tổng theo time period
   const calculateTotalByTimePeriod = (type: 'expense' | 'income') => {
@@ -145,8 +133,122 @@ export default function HomePage() {
   };
 
   const getCategoryIcon = (category: string) => {
-    const icons: { [key: string]: string } = {
-      // Danh mục tiếng Việt từ storage.ts
+    // Mapping cho key-based icons (từ IconPicker) - KIỂM TRA TRƯỚC
+    const keyToIconMap: { [key: string]: string } = {
+      'DollarSign': '💲',
+      'Banknote': '💵', 
+      'CreditCard': '💳',
+      'Wallet': '👛',
+      'PiggyBank': '🐷',
+      'TrendingUp': '📈',
+      'HandCoins': '🤲',
+      'Receipt': '🧾',
+      'UtensilsCrossed': '🍽️',
+      'Coffee': '☕',
+      'Pizza': '🍕',
+      'ChefHat': '👨‍🍳',
+      'Cake': '🎂',
+      'Beer': '🍺',
+      'Apple': '🍎',
+      'Bread': '🍞',
+      'Rice': '🍚',
+      'Noodles': '🍜',
+      'Car': '🚗',
+      'Fuel': '⛽',
+      'Bus': '🚌',
+      'Train': '🚊',
+      'Plane': '✈️',
+      'Bike': '🚲',
+      'Motorcycle': '🏍️',
+      'Taxi': '🚕',
+      'ParkingCircle': '🅿️',
+      'Wrench': '🔧',
+      'Home': '🏠',
+      'Zap': '⚡',
+      'Droplets': '💧',
+      'Wifi': '📶',
+      'Tv': '📺',
+      'Flame': '🔥',
+      'Bed': '🛏️',
+      'Sofa': '🛋️',
+      'Bath': '🛁',
+      'Kitchen': '🍳',
+      'ShoppingBag': '🛍️',
+      'ShoppingCart': '🛒',
+      'Gift': '🎁',
+      'Shirt': '👕',
+      'Shoes': '👟',
+      'Watch': '⌚',
+      'Bag': '🎒',
+      'Glasses': '👓',
+      'Sparkles': '✨',
+      'Perfume': '🧴',
+      'GameController': '🎮',
+      'Music': '🎵',
+      'Movie': '🎬',
+      'Camera': '📷',
+      'Book': '�',
+      'Sport': '⚽',
+      'Gym': '🏋️',
+      'Swimming': '🏊',
+      'Travel': '🧳',
+      'Beach': '�️',
+      'Hospital': '🏥',
+      'Medicine': '💊',
+      'Doctor': '👨‍⚕️',
+      'Stethoscope': '🩺',
+      'Syringe': '💉',
+      'Dental': '🦷',
+      'Glasses2': '👓',
+      'Heart': '❤️',
+      'School': '�',
+      'BookOpen': '📚',
+      'Pencil': '✏️',
+      'Calculator': '🔢',
+      'Computer': '💻',
+      'Graduation': '🎓',
+      'Certificate': '📜',
+      'Office': '🏢',
+      'Phone': '📱',
+      'Email': '📧',
+      'Calendar': '📅',
+      'User': '👤',
+      'Family': '👨‍👩‍👧‍👦',
+      'Pet': '🐕',
+      'Insurance': '🛡️',
+      'Tax': '🧾',
+      'Charity': '🤝',
+      'Tools': '🔨',
+      'Settings': '⚙️',
+      'Star': '⭐',
+      'Question': '❓',
+      'Briefcase': '💼',
+      'Building': '🏢',
+      'Factory': '🏭',
+      'Hammer': '🔨',
+      'Scissors': '✂️',
+    };
+
+    // 1. Check key mapping TRƯỚC TIÊN
+    if (keyToIconMap[category]) {
+      return keyToIconMap[category];
+    }
+    
+    // 2. Tìm category object
+    const categoryObj = categories.find(c => c.id === category);
+    
+    // 3. Nếu có icon key trong category object, check mapping
+    if (categoryObj?.icon && keyToIconMap[categoryObj.icon]) {
+      return keyToIconMap[categoryObj.icon];
+    }
+    
+    // 4. Nếu icon là emoji luôn (length <= 4)
+    if (categoryObj?.icon && categoryObj.icon.length <= 4) {
+      return categoryObj.icon;
+    }
+
+    // 5. Fallback cho trường hợp category cũ hoặc không có icon
+    const defaultIcons: { [key: string]: string } = {
       'Ăn uống': '🍽️',
       'Di chuyển': '🚗', 
       'Mua sắm': '🛍️',
@@ -154,7 +256,7 @@ export default function HomePage() {
       'Y tế': '🏥',
       'Học tập': '📚',
       'Sinh hoạt': '🏠',
-      'Hoá đơn & Tiện ích': '📄',
+      'Hoá đơn & Tiện ích': '🧾',
       'Thuê nhà': '🏘️',
       'Hoá đơn nước': '💧',
       'Hoá đơn điện thoại': '📱',
@@ -167,6 +269,11 @@ export default function HomePage() {
       'Freelance': '💻',
       'Đầu tư': '📈',
       'Khác': '📦',
+      'vứt tiền': '💸',
+      'Xăng xe': '⛽',
+      'Đồ dùng cá nhân': '👤',
+      'hihi': '😂',
+      'hehehehehe': '😆',
       // Fallback cho các key tiếng Anh cũ
       'food': '🍽️',
       'transport': '🚗', 
@@ -174,7 +281,7 @@ export default function HomePage() {
       'entertainment': '🎬',
       'health': '🏥',
       'education': '📚',
-      'bills': '💡',
+      'bills': '🧾',
       'investment': '📈',
       'salary': '💰',
       'freelance': '💼',
@@ -183,24 +290,24 @@ export default function HomePage() {
       'other': '📦'
     };
     
-    // Tìm category theo ID trước
-    const categoryById = categories.find(cat => cat.id === category);
-    if (categoryById) {
-      return categoryById.icon;
-    }
-    
-    // Fallback: tìm theo name (cho dữ liệu cũ) 
-    const categoryByName = categories.find(cat => cat.name === category);
-    if (categoryByName) {
-      return categoryByName.icon;
-    }
-    
-    return icons[category] || '📦';
+    // Fallback cuối cùng từ mapping
+    return defaultIcons[categoryObj?.name || category] || '📦';
   };
 
   const getCategoryName = (category: string) => {
-    // Danh mục đã là tiếng Việt từ storage.ts, trả về luôn
-    // Chỉ cần fallback cho các key tiếng Anh cũ
+    // Tìm category theo ID trước tiên
+    const categoryById = categories.find(cat => cat.id === category);
+    if (categoryById) {
+      return categoryById.name;
+    }
+    
+    // Tìm theo name (cho dữ liệu cũ)
+    const categoryByName = categories.find(cat => cat.name === category);
+    if (categoryByName) {
+      return categoryByName.name;
+    }
+
+    // Fallback cho các key tiếng Anh cũ
     const names: { [key: string]: string } = {
       'food': 'Ăn uống',
       'transport': 'Di chuyển',
@@ -217,18 +324,6 @@ export default function HomePage() {
       'other': 'Khác'
     };
     
-    // Tìm category theo ID trước
-    const categoryById = categories.find(cat => cat.id === category);
-    if (categoryById) {
-      return categoryById.name;
-    }
-    
-    // Fallback: nếu đã là tên tiếng Việt rồi thì trả về luôn
-    const categoryByName = categories.find(cat => cat.name === category);
-    if (categoryByName) {
-      return categoryByName.name;
-    }
-    
     // Nếu là tiếng Anh cũ thì dịch, nếu không thì trả về nguyên bản
     return names[category] || category;
   };
@@ -244,14 +339,24 @@ export default function HomePage() {
   const TabButton = ({ tab, icon, label }: { tab: TabType; icon: React.ReactNode; label: string }) => (
     <button
       onClick={() => setActiveTab(tab)}
-      className={`flex-1 flex flex-col items-center py-2 px-1 ${
+      className={`flex flex-col items-center justify-center py-2 px-1 transition-all duration-200 ${
         activeTab === tab
-          ? 'text-primary-600 border-t-2 border-primary-600'
-          : 'text-gray-400'
+          ? 'text-blue-600'
+          : 'text-gray-500 hover:text-gray-700'
       }`}
     >
-      {icon}
-      <span className="text-xs mt-1">{label}</span>
+      <div className={`p-2 rounded-xl transition-all duration-200 ${
+        activeTab === tab 
+          ? 'bg-blue-50 text-blue-600 scale-110' 
+          : 'hover:bg-gray-50'
+      }`}>
+        {icon}
+      </div>
+      <span className={`text-xs mt-1 font-medium transition-all duration-200 text-center leading-tight ${
+        activeTab === tab ? 'text-blue-600' : 'text-gray-500'
+      }`}>
+        {label}
+      </span>
     </button>
   );
 
@@ -308,7 +413,7 @@ export default function HomePage() {
                           className="w-10 h-10 rounded-full flex items-center justify-center"
                           style={{ backgroundColor: wallet.color + '30' }}
                         >
-                          <span className="text-lg">{wallet.icon}</span>
+                          <span className="text-lg">{getWalletIcon(wallet.icon)}</span>
                         </div>
                         <div className="flex-1">
                           <h4 className="font-medium text-gray-900">{wallet.name}</h4>
@@ -438,63 +543,24 @@ export default function HomePage() {
             </div>
 
             {/* Chi tiêu nhiều nhất */}
-            <div className="bg-white rounded-xl shadow-sm">
-              <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                <h3 className="text-lg font-semibold text-gray-900">Chi tiêu nhiều nhất</h3>
-                <span className="text-green-600 text-sm">Xem tất cả</span>
-              </div>
-              <div className="p-4">
-                {/* Tuần này */}
-                <div className="mb-4">
-                  <p className="text-sm text-gray-500 mb-2">Tuần này</p>
-                  {topWeekExpense ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm">{getCategoryIcon(topWeekExpense.category)}</span>
-                        </div>
-                        <span className="font-medium text-gray-900">{getCategoryName(topWeekExpense.category)}</span>
-                      </div>
-                      <span className="font-bold text-red-600">
-                        {topWeekExpense.percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <span className="text-gray-500">Chưa có giao dịch</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Tháng này */}
-                <div>
-                  <p className="text-sm text-gray-500 mb-2">Tháng này</p>
-                  {topMonthExpense ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                          <span className="text-sm">{getCategoryIcon(topMonthExpense.category)}</span>
-                        </div>
-                        <span className="font-medium text-gray-900">{getCategoryName(topMonthExpense.category)}</span>
-                      </div>
-                      <span className="font-bold text-red-600">
-                        {topMonthExpense.percentage.toFixed(1)}%
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="text-center py-4">
-                      <span className="text-gray-500">Chưa có giao dịch</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+            <TopExpensesWidget 
+              transactions={transactions}
+              categories={categories}
+            />
 
             {/* Giao dịch gần đây */}
             <div className="bg-white rounded-xl shadow-sm">
               <div className="flex items-center justify-between p-4 border-b border-gray-100">
                 <h3 className="text-lg font-semibold text-gray-900">Giao dịch gần đây</h3>
-                <span className="text-green-600 text-sm">Xem tất cả</span>
+                <button 
+                  onClick={() => {
+                    setActiveTab('transactions');
+                    window.scrollTo(0, 0);
+                  }}
+                  className="text-green-600 text-sm hover:text-green-700 transition-colors"
+                >
+                  Xem tất cả
+                </button>
               </div>
               <div className="p-4">
                 {recentTransactions.length === 0 ? (
@@ -507,16 +573,14 @@ export default function HomePage() {
                 ) : (
                   <div className="space-y-3">
                     {recentTransactions.slice(0, 5).map((transaction) => {
-                      // Tìm category theo ID
-                      const category = categories.find(cat => cat.id === transaction.category);
-                      const categoryName = category?.name || transaction.category;
-                      const categoryIcon = category?.icon || '📦';
+                      const categoryName = getCategoryName(transaction.category);
+                      const categoryIcon = getCategoryIcon(transaction.category);
                       
                       return (
                         <div key={transaction.id} className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm">
+                              <span className="text-lg">
                                 {categoryIcon}
                               </span>
                             </div>
@@ -546,6 +610,7 @@ export default function HomePage() {
         {activeTab === 'transactions' && (
           <TransactionsPage 
             transactions={transactions}
+            categories={categories}
             onEdit={handleEditTransaction}
             onDelete={handleDeleteTransaction}
           />
@@ -567,39 +632,71 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
-        <div className="flex py-2">
-          <TabButton
-            tab="home"
-            icon={<Home size={20} />}
-            label="Tổng quan"
-          />
-          <TabButton
-            tab="transactions"
-            icon={<History size={20} />}
-            label="Số giao dịch"
-          />
-          <TabButton
-            tab="stats"
-            icon={<BarChart3 size={20} />}
-            label="Ngân sách"
-          />
-          <TabButton
-            tab="settings"
-            icon={<Settings size={20} />}
-            label="Cài đặt"
-          />
+      {/* Bottom Navigation with Center FAB */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg">
+        <div className="grid grid-cols-5 items-center py-3 px-4">
+          {/* Tab 1 */}
+          <div className="flex justify-center">
+            <TabButton
+              tab="home"
+              icon={<Home size={22} />}
+              label="Tổng quan"
+            />
+          </div>
+          
+          {/* Tab 2 */}
+          <div className="flex justify-center">
+            <TabButton
+              tab="transactions"
+              icon={<History size={22} />}
+              label="Lịch sử"
+            />
+          </div>
+          
+          {/* Center FAB */}
+          <div className="flex justify-center">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="w-16 h-16 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white rounded-full shadow-xl flex items-center justify-center transition-all duration-200 transform hover:scale-105 active:scale-95 relative -mt-2"
+            >
+              <div className="absolute inset-0 bg-white/10 rounded-full"></div>
+              <svg 
+                className="w-7 h-7 relative z-10" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path 
+                  strokeLinecap="round" 
+                  strokeLinejoin="round" 
+                  strokeWidth={2.5} 
+                  d="M12 4v16m8-8H4" 
+                />
+              </svg>
+            </button>
+          </div>
+          
+          {/* Tab 3 */}
+          <div className="flex justify-center">
+            <TabButton
+              tab="stats"
+              icon={<BarChart3 size={22} />}
+              label="Thống kê"
+            />
+          </div>
+          
+          {/* Tab 4 */}
+          <div className="flex justify-center">
+            <TabButton
+              tab="settings"
+              icon={<Settings size={22} />}
+              label="Cài đặt"
+            />
+          </div>
         </div>
         {/* Extended white background to fill bottom gap */}
         <div className="h-4 bg-white"></div>
       </div>
-
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        onClick={() => setIsModalOpen(true)}
-        className="mb-20"
-      />
 
       {/* Transaction Modal */}
       <TransactionModal

@@ -29,17 +29,28 @@ export function useTransactions() {
       storageService.addTransaction(transaction);
       setTransactions(prev => [transaction, ...prev]);
       
-      // Update wallet balance if wallet is specified
-      if (transaction.walletId) {
+      // Update wallet balance
+      if (transaction.walletId.trim() !== '') {
         const wallets = storageService.getWallets();
         const wallet = wallets.find(w => w.id === transaction.walletId);
         if (wallet) {
           const balanceChange = transaction.type === 'income' 
             ? transaction.amount 
             : -transaction.amount;
+          
+          const newBalance = wallet.balance + balanceChange;
           storageService.updateWallet(wallet.id, {
-            balance: wallet.balance + balanceChange
+            balance: newBalance
           });
+          
+          // Trigger a storage event to notify other hooks
+          window.dispatchEvent(new CustomEvent('walletUpdated', { 
+            detail: { 
+              walletId: wallet.id,
+              newBalance: newBalance,
+              action: 'transaction_added'
+            } 
+          }));
         }
       }
     } catch (error) {
@@ -52,39 +63,46 @@ export function useTransactions() {
       const oldTransaction = transactions.find(t => t.id === id);
       if (!oldTransaction) return;
 
+      // Get wallets once to avoid conflicts
+      const wallets = storageService.getWallets();
+      
       // Revert old wallet balance change
-      if (oldTransaction.walletId) {
-        const wallets = storageService.getWallets();
-        const wallet = wallets.find(w => w.id === oldTransaction.walletId);
-        if (wallet) {
+      if (oldTransaction.walletId.trim() !== '') {
+        const oldWallet = wallets.find(w => w.id === oldTransaction.walletId);
+        if (oldWallet) {
           const oldBalanceChange = oldTransaction.type === 'income' 
             ? -oldTransaction.amount 
             : oldTransaction.amount;
-          storageService.updateWallet(wallet.id, {
-            balance: wallet.balance + oldBalanceChange
-          });
+          oldWallet.balance += oldBalanceChange;
         }
       }
 
-      storageService.updateTransaction(id, updatedData);
+      // Prepare new transaction
       const newTransaction = { ...oldTransaction, ...updatedData };
-      setTransactions(prev => 
-        prev.map(t => t.id === id ? newTransaction : t)
-      );
-
+      
       // Apply new wallet balance change
-      if (newTransaction.walletId) {
-        const wallets = storageService.getWallets();
-        const wallet = wallets.find(w => w.id === newTransaction.walletId);
-        if (wallet) {
+      if (newTransaction.walletId.trim() !== '') {
+        const newWallet = wallets.find(w => w.id === newTransaction.walletId);
+        if (newWallet) {
           const newBalanceChange = newTransaction.type === 'income' 
             ? newTransaction.amount 
             : -newTransaction.amount;
-          storageService.updateWallet(wallet.id, {
-            balance: wallet.balance + newBalanceChange
-          });
+          newWallet.balance += newBalanceChange;
         }
       }
+
+      // Save all changes
+      storageService.updateTransaction(id, updatedData);
+      storageService.saveWallets(wallets);
+      
+      // Trigger wallet update event
+      window.dispatchEvent(new CustomEvent('walletUpdated', { 
+        detail: { walletId: oldTransaction.walletId || newTransaction.walletId } 
+      }));
+      
+      setTransactions(prev => 
+        prev.map(t => t.id === id ? newTransaction : t)
+      );
     } catch (error) {
       console.error('Error updating transaction:', error);
     }
@@ -96,7 +114,7 @@ export function useTransactions() {
       if (!transaction) return;
 
       // Revert wallet balance change
-      if (transaction.walletId) {
+      if (transaction.walletId.trim() !== '') {
         const wallets = storageService.getWallets();
         const wallet = wallets.find(w => w.id === transaction.walletId);
         if (wallet) {
@@ -106,6 +124,11 @@ export function useTransactions() {
           storageService.updateWallet(wallet.id, {
             balance: wallet.balance + balanceChange
           });
+          
+          // Trigger wallet update event
+          window.dispatchEvent(new CustomEvent('walletUpdated', { 
+            detail: { walletId: transaction.walletId } 
+          }));
         }
       }
 
@@ -187,19 +210,29 @@ export function useWallets() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const loadWallets = () => {
-      try {
-        const savedWallets = storageService.getWallets();
-        setWallets(savedWallets);
-      } catch (error) {
-        console.error('Error loading wallets:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const loadWallets = () => {
+    try {
+      const savedWallets = storageService.getWallets();
+      setWallets(savedWallets);
+    } catch (error) {
+      console.error('Error loading wallets:', error);
+    }
+  };
 
+  useEffect(() => {
     loadWallets();
+    setLoading(false);
+    
+    // Listen for wallet updates from transactions
+    const handleWalletUpdate = () => {
+      loadWallets();
+    };
+    
+    window.addEventListener('walletUpdated', handleWalletUpdate);
+    
+    return () => {
+      window.removeEventListener('walletUpdated', handleWalletUpdate);
+    };
   }, []);
 
   const addWallet = (wallet: Omit<Wallet, 'id' | 'createdAt'>) => {

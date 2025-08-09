@@ -1,20 +1,21 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Transaction } from '@/types';
+import { Transaction, Category } from '@/types';
 import { TransactionItem } from '@/components/TransactionItem';
 import { formatCurrency, calculateBalance, calculateTotalByType, formatDate } from '@/lib/utils';
 import { ChevronDown } from 'lucide-react';
 
 interface TransactionsPageProps {
   transactions: Transaction[];
+  categories: Category[];
   onEdit: (transaction: Transaction) => void;
   onDelete: (id: string) => void;
 }
 
 type TimePeriod = 'previous' | 'current' | 'future';
 
-export function TransactionsPage({ transactions, onEdit, onDelete }: TransactionsPageProps) {
+export function TransactionsPage({ transactions, categories, onEdit, onDelete }: TransactionsPageProps) {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('current');
 
   const getCurrentMonth = () => {
@@ -192,6 +193,7 @@ export function TransactionsPage({ transactions, onEdit, onDelete }: Transaction
                     <TransactionItem
                       key={transaction.id}
                       transaction={transaction}
+                      categories={categories}
                       onEdit={onEdit}
                       onDelete={onDelete}
                     />

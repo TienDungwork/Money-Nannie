@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reset Data</title>
+</head>
+<body>
+    <h1>Debug LocalStorage</h1>
+    <button onclick="resetData()">Reset All Data</button>
+    <button onclick="logData()">Log Current Data</button>
+    <button onclick="logWallets()">Log Wallets</button>
+    <button onclick="logTransactions()">Log Transactions</button>
+    <pre id="output"></pre>
+
+    <script>
+        function resetData() {
+            localStorage.removeItem('expense-tracker-transactions');
+            localStorage.removeItem('expense-tracker-wallets');
+            localStorage.removeItem('expense-tracker-categories');
+            document.getElementById('output').textContent = 'Data reset!';
+        }
+
+        function logData() {
+            const transactions = JSON.parse(localStorage.getItem('expense-tracker-transactions') || '[]');
+            const wallets = JSON.parse(localStorage.getItem('expense-tracker-wallets') || '[]');
+            const categories = JSON.parse(localStorage.getItem('expense-tracker-categories') || '[]');
+            
+            const output = {
+                transactions: transactions.slice(0, 5),
+                wallets: wallets,
+                categories: categories.slice(0, 5)
+            };
+            
+            document.getElementById('output').textContent = JSON.stringify(output, null, 2);
+        }
+
+        function logWallets() {
+            const wallets = JSON.parse(localStorage.getItem('expense-tracker-wallets') || '[]');
+            document.getElementById('output').textContent = JSON.stringify(wallets, null, 2);
+        }
+
+        function logTransactions() {
+            const transactions = JSON.parse(localStorage.getItem('expense-tracker-transactions') || '[]');
+            document.getElementById('output').textContent = JSON.stringify(transactions.slice(0, 10), null, 2);
+        }
+    </script>
+</body>
+</html>
