@@ -1,40 +1,16 @@
 import { Transaction, MonthlyStats, CategoryStats } from '@/types';
+import { 
+  formatCurrency as formatCurrencyHelper,
+  formatDate as formatDateHelper,
+  formatDetailedDate as formatDetailedDateHelper,
+  formatRelativeDate as formatRelativeDateHelper
+} from './helpers';
 
-export function formatCurrency(amount: number): string {
-  // Format với dấu phẩy phân cách hàng nghìn và ký hiệu ₫
-  const formatted = new Intl.NumberFormat('vi-VN').format(amount);
-  return `${formatted} ₫`;
-}
-
-export function formatDate(date: string): string {
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  }).format(new Date(date));
-}
-
-export function formatDetailedDate(date: string): string {
-  const dateObj = new Date(date);
-  return new Intl.DateTimeFormat('vi-VN', {
-    weekday: 'long',
-    day: '2-digit',
-    month: 'long', 
-    year: 'numeric',
-  }).format(dateObj);
-}
-
-export function formatRelativeDate(date: string): string {
-  const now = new Date();
-  const transactionDate = new Date(date);
-  const diffInDays = Math.floor((now.getTime() - transactionDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (diffInDays === 0) return 'Hôm nay';
-  if (diffInDays === 1) return 'Hôm qua';
-  if (diffInDays < 7) return `${diffInDays} ngày trước`;
-  
-  return formatDate(date);
-}
+// Re-export centralized helpers for backward compatibility
+export const formatCurrency = formatCurrencyHelper;
+export const formatDate = formatDateHelper;
+export const formatDetailedDate = formatDetailedDateHelper;
+export const formatRelativeDate = formatRelativeDateHelper;
 
 export function calculateBalance(transactions: Transaction[]): number {
   return transactions.reduce((balance, transaction) => {

@@ -1,4 +1,5 @@
 import { Transaction, Category, Wallet } from '@/types';
+import { sampleCategories } from './defaultCategories';
 
 const STORAGE_KEYS = {
   TRANSACTIONS: 'expense-tracker-transactions',
@@ -7,7 +8,7 @@ const STORAGE_KEYS = {
 } as const;
 
 // Categories đã được chuyển sang sử dụng sampleCategories từ defaultCategories.ts
-export const defaultCategories: Category[] = [];
+export const defaultCategories: Category[] = sampleCategories;
 
 export const defaultWallets: Wallet[] = [
   {

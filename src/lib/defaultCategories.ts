@@ -83,12 +83,14 @@ export const sampleCategories: Category[] = [
 
 // Helper function để kết hợp sample categories với user categories
 export const getAllCategories = (userCategories: Category[] = []): Category[] => {
-  return [...sampleCategories, ...userCategories];
+  // Trả về user categories từ storage (đã bao gồm cả sample và custom)
+  return userCategories;
 };
 
 // Helper function để kiểm tra xem category có phải sample category không
 export const isSampleCategory = (categoryId: string): boolean => {
-  return sampleCategories.some(cat => cat.id === categoryId);
+  // Cho phép sửa xóa tất cả categories bao gồm cả sample categories
+  return false;
 };
 
 // Helper functions để lọc categories theo type và parent

@@ -551,7 +551,7 @@ export default function HomePage() {
           />
         )}
 
-        {activeTab === 'stats' && <BudgetPage transactions={transactions} />}
+        {activeTab === 'stats' && <BudgetPage transactions={transactions} categories={categories} wallets={wallets} />}
         
         {activeTab === 'settings' && (
           <SettingsPage 
@@ -609,7 +609,6 @@ export default function HomePage() {
         categories={categories}
         wallets={wallets}
         transaction={editingTransaction}
-        onAddCategory={addCategory}
       />
     </div>
   );

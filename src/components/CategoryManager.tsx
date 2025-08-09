@@ -5,6 +5,7 @@ import { Category } from '@/types';
 import { IconPicker } from '@/components/IconPicker';
 import { ChevronRight, Plus, Edit, Trash2, X, ArrowLeft } from 'lucide-react';
 import { getAllCategories, getParentCategories, getChildCategories, isSampleCategory } from '@/lib/defaultCategories';
+import { getCategoryIcon } from '@/lib/helpers';
 
 type NavigationView = 'main' | 'category-type' | 'category-parent' | 'category-child' | 'add-category';
 
@@ -34,6 +35,7 @@ export function CategoryManager({
   const [selectedParentCategory, setSelectedParentCategory] = useState<Category | null>(null);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
+  const [showParentSelector, setShowParentSelector] = useState(false);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -41,28 +43,10 @@ export function CategoryManager({
     type: 'expense' as 'expense' | 'income' | 'loan',
     isParent: true,
     parentId: '',
+    parentName: '',
   });
 
-  // Helper functions đã được thay thế bằng import từ shared lib
-
-  const getCategoryIcon = (icon: string): string => {
-    const iconMap: { [key: string]: string } = {
-      DollarSign: '💲', Banknote: '💵', CreditCard: '💳', Wallet: '👛', 
-      PiggyBank: '🐷', TrendingUp: '📈', HandCoins: '🤲', Receipt: '🧾',
-      UtensilsCrossed: '🍽️', Coffee: '☕', Pizza: '🍕', ChefHat: '👨‍🍳',
-      Car: '🚗', Fuel: '⛽', Bus: '🚌', Taxi: '🚕', 
-      ShoppingBag: '🛍️', ShoppingCart: '🛒', Gift: '🎁', Shirt: '👕',
-      GameController: '🎮', Music: '🎵', Movie: '🎬', Camera: '📷',
-      Hospital: '🏥', Medicine: '💊', Doctor: '👨‍⚕️', Stethoscope: '🩺',
-      School: '🏫', BookOpen: '📚', Pencil: '✏️', Computer: '💻',
-      Home: '🏠', Zap: '⚡', Droplets: '💧', Phone: '📱', Tv: '📺',
-      User: '👤', Family: '👨‍👩‍👧‍👦', HandHeart: '🤝', Settings: '⚙️',
-      Sparkles: '✨', Wrench: '🔧', ParkingCircle: '🅿️', Apple: '🍎',
-      Sport: '⚽', Travel: '🧳', Gym: '🏋️', Dental: '🦷', Graduation: '🎓',
-      Certificate: '📜', Briefcase: '💼', Wifi: '📶', Flame: '🔥'
-    };
-    return iconMap[icon] || '💰';
-  };
+  // Remove duplicate getCategoryIcon function - now using centralized helper
 
   const getViewTitle = () => {
     switch (currentView) {
@@ -79,6 +63,9 @@ export function CategoryManager({
 
   const handleSave = () => {
     if (!formData.name.trim()) return;
+
+    // Prevent double submissions
+    if (currentView !== 'add-category') return;
 
     if (editingCategory) {
       if (updateCategory) {
@@ -106,42 +93,34 @@ export function CategoryManager({
       }
     }
 
+    // Reset form and navigate back immediately
     setFormData({
       name: '',
       icon: 'DollarSign',
       type: 'expense',
       isParent: true,
       parentId: '',
+      parentName: '',
     });
     setEditingCategory(null);
     setCurrentView('main');
   };
 
   const handleEdit = (category: Category) => {
-    // Không cho phép edit sample categories
-    if (isSampleCategory(category.id)) {
-      alert('Không thể sửa đổi nhóm mặc định của hệ thống');
-      return;
-    }
-    
     setEditingCategory(category);
+    const parentCategory = category.parentId ? categories.find(c => c.id === category.parentId) : null;
     setFormData({
       name: category.name,
       icon: category.icon,
       type: category.type,
       isParent: category.isParent ?? true,
       parentId: category.parentId || '',
+      parentName: parentCategory?.name || '',
     });
     setCurrentView('add-category');
   };
 
   const handleDelete = (categoryId: string) => {
-    // Không cho phép delete sample categories
-    if (isSampleCategory(categoryId)) {
-      alert('Không thể xóa nhóm mặc định của hệ thống');
-      return;
-    }
-    
     if (confirm('Bạn có chắc muốn xóa danh mục này?')) {
       if (deleteCategory) {
         deleteCategory(categoryId);
@@ -243,6 +222,7 @@ export function CategoryManager({
               type: selectedCategoryType,
               isParent: true,
               parentId: '',
+              parentName: '',
             });
             setCurrentView('add-category');
           }}
@@ -279,7 +259,7 @@ export function CategoryManager({
                     className="w-10 h-10 rounded-full flex items-center justify-center"
                     style={{ backgroundColor: category.color + '20' }}
                   >
-                    <span className="text-lg">{category.icon}</span>
+                    <span className="text-lg">{getCategoryIcon(category.icon)}</span>
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">{category.name}</p>
@@ -287,7 +267,7 @@ export function CategoryManager({
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {mode === 'management' && !isSampleCategory(category.id) && (
+                  {mode === 'management' && (
                     <div className="flex space-x-1">
                       <button
                         onClick={(e) => {
@@ -321,7 +301,7 @@ export function CategoryManager({
                       className="w-6 h-6 rounded-full flex items-center justify-center"
                       style={{ backgroundColor: child.color + '20' }}
                     >
-                      <span className="text-xs">{child.icon}</span>
+                      <span className="text-xs">{getCategoryIcon(child.icon)}</span>
                     </div>
                     <p className="text-sm text-gray-700">{child.name}</p>
                   </div>
@@ -343,6 +323,7 @@ export function CategoryManager({
                   type: selectedCategoryType,
                   isParent: true,
                   parentId: '',
+                  parentName: '',
                 });
                 setCurrentView('add-category');
               }}
@@ -378,7 +359,7 @@ export function CategoryManager({
               className="w-10 h-10 rounded-full flex items-center justify-center"
               style={{ backgroundColor: selectedParentCategory.color + '20' }}
             >
-              <span className="text-lg">{selectedParentCategory.icon}</span>
+              <span className="text-lg">{getCategoryIcon(selectedParentCategory.icon)}</span>
             </div>
             <div>
               <p className="font-medium text-gray-900">{selectedParentCategory.name}</p>
@@ -397,6 +378,7 @@ export function CategoryManager({
               type: selectedParentCategory.type,
               isParent: false,
               parentId: selectedParentCategory.id,
+              parentName: selectedParentCategory.name,
             });
             setCurrentView('add-category');
           }}
@@ -427,12 +409,12 @@ export function CategoryManager({
                 className="w-8 h-8 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: child.color + '20' }}
               >
-                <span className="text-sm">{child.icon}</span>
+                <span className="text-sm">{getCategoryIcon(child.icon)}</span>
               </div>
               <p className="text-sm text-gray-800">{child.name}</p>
             </div>
             
-            {mode === 'management' && !isSampleCategory(child.id) && (
+            {mode === 'management' && (
               <div className="flex space-x-1">
                 <button
                   onClick={(e) => {
@@ -469,107 +451,192 @@ export function CategoryManager({
   const renderAddCategoryForm = () => (
     <div className="space-y-4">
       {/* Tên nhóm */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Tên nhóm
-        </label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-lg">$</span>
+      <div className="space-y-2">
+        <div className="flex items-center space-x-3 p-4 border border-gray-200 rounded-lg bg-white">
+          <button
+            type="button"
+            onClick={() => setShowIconPicker(true)}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-colors ${
+              formData.type === 'income' ? 'bg-green-500 hover:bg-green-600' : 
+              formData.type === 'expense' ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-500 hover:bg-purple-600'
+            }`}
+          >
+            <span className="text-white text-lg">{getCategoryIcon(formData.icon)}</span>
+          </button>
           <input
             type="text"
             value={formData.name}
             onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
             placeholder="Tên nhóm"
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg"
+            className="flex-1 bg-transparent border-none outline-none text-gray-900 placeholder-gray-500 text-base"
+            autoFocus
           />
         </div>
       </div>
 
-      {/* Loại giao dịch */}
-      <div>
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setFormData(prev => ({ ...prev, type: 'income' }))}
-            className={`flex-1 py-3 px-4 rounded-lg border transition-colors ${
-              formData.type === 'income'
-                ? 'border-green-500 bg-green-50 text-green-700'
-                : 'border-gray-300 text-gray-600 bg-white'
-            }`}
-          >
-            <div className="flex items-center justify-center space-x-2">
-              <span className="text-lg">⚡</span>
-              <span className="font-medium">Khoản thu</span>
-            </div>
-          </button>
-          <button
-            onClick={() => setFormData(prev => ({ ...prev, type: 'expense' }))}
-            className={`flex-1 py-3 px-4 rounded-lg border transition-colors ${
-              formData.type === 'expense'
-                ? 'border-red-500 bg-red-50 text-red-700'
-                : 'border-gray-300 text-gray-600 bg-white'
-            }`}
-          >
-            <div className="flex items-center justify-center space-x-2">
-              <span className="text-lg">💸</span>
-              <span className="font-medium">Khoản chi</span>
-            </div>
-          </button>
+      {/* Phân loại */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white">
+          <div className="flex space-x-1">
+            <button
+              onClick={() => setFormData(prev => ({ 
+                ...prev, 
+                type: 'income',
+                parentId: '',
+                parentName: '',
+                isParent: true
+              }))}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                formData.type === 'income'
+                  ? 'bg-green-100 text-green-700 border border-green-300'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Khoản thu
+            </button>
+            <button
+              onClick={() => setFormData(prev => ({ 
+                ...prev, 
+                type: 'expense',
+                parentId: '',
+                parentName: '',
+                isParent: true
+              }))}
+              className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                formData.type === 'expense'
+                  ? 'bg-red-100 text-red-700 border border-red-300'
+                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              Khoản chi
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Chọn nhóm */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Chọn nhóm
-        </label>
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setShowIconPicker(true)}
-            className="absolute left-3 top-1/2 transform -translate-y-1/2 w-6 h-6 rounded bg-gray-100 flex items-center justify-center"
-          >
-            <span className="text-sm">{getCategoryIcon(formData.icon)}</span>
-          </button>
-          <select
-            value={formData.parentId}
-            onChange={(e) => setFormData(prev => ({ 
-              ...prev, 
-              parentId: e.target.value,
-              isParent: e.target.value === ''
-            }))}
-            className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg appearance-none bg-white"
-          >
-            <option value="">Tạo nhóm cha mới</option>
-            {getParentCategories(formData.type, categories).map((parent) => (
-              <option key={parent.id} value={parent.id}>
-                {parent.name}
-              </option>
-            ))}
-          </select>
-          <span className="text-xs text-gray-500 mt-1 block pl-12">
-            Tạo nhóm cha mới
-          </span>
-        </div>
+      <div className="space-y-2">
+        <button
+          onClick={() => setShowParentSelector(true)}
+          className="w-full flex items-center justify-between p-4 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center space-x-3">
+            <span className="text-xl">🏷️</span>
+            <span className="text-gray-700 font-medium">Chọn nhóm</span>
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="text-gray-600 text-sm">
+              {formData.parentName || 'Nhóm cha'}
+            </span>
+            <ChevronRight size={16} className="text-gray-400" />
+          </div>
+        </button>
       </div>
 
-      {/* Buttons */}
+      {/* Action Buttons */}
       <div className="flex space-x-3 pt-4">
         <button
           onClick={goBack}
-          className="flex-1 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium"
+          className="flex-1 py-3 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
         >
           Hủy
         </button>
         <button
           onClick={handleSave}
           disabled={!formData.name.trim()}
-          className="flex-1 py-3 bg-gray-400 text-white rounded-lg font-medium disabled:bg-gray-300"
+          className="flex-1 py-3 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
         >
-          Lưu
+          {editingCategory ? 'Cập nhật' : 'Tạo nhóm'}
         </button>
       </div>
     </div>
   );
+
+  const renderParentSelector = () => {
+    const parentCategories = getParentCategories(formData.type, categories);
+    
+    return (
+      <div className="space-y-3">
+        {/* Tùy chọn Nhóm cha */}
+        <div
+          onClick={() => {
+            setFormData(prev => ({ 
+              ...prev, 
+              parentId: '', 
+              parentName: '',
+              isParent: true 
+            }));
+            setShowParentSelector(false);
+          }}
+          className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+            formData.parentId === '' 
+              ? 'border-blue-500 bg-blue-50' 
+              : 'border-gray-200 bg-white hover:bg-gray-50'
+          }`}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center">
+              <span className="text-white text-lg">📁</span>
+            </div>
+            <div>
+              <p className="font-medium text-gray-900">Nhóm cha</p>
+              <p className="text-sm text-gray-500">Tạo nhóm chính</p>
+            </div>
+          </div>
+          {formData.parentId === '' && (
+            <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+              <span className="text-white text-xs">✓</span>
+            </div>
+          )}
+        </div>
+
+        {/* Danh sách nhóm cha có sẵn */}
+        {parentCategories.map((parent) => (
+          <div
+            key={parent.id}
+            onClick={() => {
+              setFormData(prev => ({ 
+                ...prev, 
+                parentId: parent.id, 
+                parentName: parent.name,
+                isParent: false 
+              }));
+              setShowParentSelector(false);
+            }}
+            className={`flex items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+              formData.parentId === parent.id 
+                ? 'border-blue-500 bg-blue-50' 
+                : 'border-gray-200 bg-white hover:bg-gray-50'
+            }`}
+          >
+            <div className="flex items-center space-x-3">
+              <div 
+                className="w-10 h-10 rounded-full flex items-center justify-center"
+                style={{ backgroundColor: parent.color + '20' }}
+              >
+                <span className="text-lg">{getCategoryIcon(parent.icon)}</span>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">{parent.name}</p>
+                <p className="text-sm text-gray-500">Tạo nhóm con</p>
+              </div>
+            </div>
+            {formData.parentId === parent.id && (
+              <div className="w-5 h-5 rounded-full bg-blue-500 flex items-center justify-center">
+                <span className="text-white text-xs">✓</span>
+              </div>
+            )}
+          </div>
+        ))}
+
+        {parentCategories.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-500">Chưa có nhóm cha nào cho loại này</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -586,24 +653,26 @@ export function CategoryManager({
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+        <div className={`bg-white rounded-2xl w-full flex flex-col overflow-hidden ${
+          currentView === 'add-category' ? 'max-w-lg max-h-[90vh]' : 'max-w-md max-h-[80vh]'
+        }`}>
           {/* Header */}
-          <div className="p-4 border-b border-gray-200">
+          <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               {currentView !== 'main' && (
                 <button
                   onClick={goBack}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <ArrowLeft size={20} />
                 </button>
               )}
-              <h2 className="text-lg font-semibold mx-auto">
+              <h2 className="text-xl font-bold text-gray-900 mx-auto">
                 {getViewTitle()}
               </h2>
               <button
                 onClick={onClose}
-                className="text-gray-500 hover:text-gray-700"
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 <X size={24} />
               </button>
@@ -611,7 +680,9 @@ export function CategoryManager({
           </div>
 
           {/* Content */}
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className={`flex-1 overflow-y-auto ${
+            currentView === 'add-category' ? 'p-6' : 'p-4'
+          }`}>
             {renderCurrentView()}
           </div>
         </div>
@@ -627,6 +698,39 @@ export function CategoryManager({
         }}
         selectedIcon={formData.icon}
       />
+
+      {/* Parent Selector Modal */}
+      {showParentSelector && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md max-h-[80vh] flex flex-col overflow-hidden">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={() => setShowParentSelector(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <h2 className="text-xl font-bold text-gray-900 mx-auto">
+                  Chọn nhóm
+                </h2>
+                <button
+                  onClick={() => setShowParentSelector(false)}
+                  className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="flex-1 overflow-y-auto p-4">
+              {renderParentSelector()}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

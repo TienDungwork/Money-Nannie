@@ -1,13 +1,13 @@
-'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Transaction, Category, Wallet } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { X, ChevronRight, Calendar, ArrowLeft, Check, Delete } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
 import { getAllCategories, getParentCategories, getChildCategories, isSampleCategory } from '@/lib/defaultCategories';
+import { formatCurrency, formatVietnameseDate, getCategoryIcon, getWalletIcon } from '@/lib/helpers';
+import { AVAILABLE_ICONS } from '@/lib/constants';
 
-type NavigationView = 'main' | 'wallet' | 'category' | 'category-type' | 'category-parent' | 'category-child' | 'add-category' | 'icon-picker' | 'parent-category-picker';
+type NavigationView = 'main' | 'wallet' | 'category' | 'category-type' | 'category-parent' | 'category-child';
 
 interface TransactionModalProps {
   isOpen: boolean;
@@ -16,7 +16,6 @@ interface TransactionModalProps {
   categories: Category[];
   wallets: Wallet[];
   transaction?: Transaction | null;
-  onAddCategory?: (category: Category) => void;
 }
 
 // Custom Number Keyboard Component
@@ -72,8 +71,7 @@ export function TransactionModal({
   onSave, 
   categories,
   wallets,
-  transaction,
-  onAddCategory
+  transaction
 }: TransactionModalProps) {
   const [currentView, setCurrentView] = useState<NavigationView>('main');
   const [showKeyboard, setShowKeyboard] = useState(false);
@@ -89,17 +87,11 @@ export function TransactionModal({
   const [selectedCategoryType, setSelectedCategoryType] = useState<'expense' | 'income' | 'loan' | null>(null);
   const [selectedParentCategory, setSelectedParentCategory] = useState<Category | null>(null);
 
-  // Add category form states
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('DollarSign');
-  const [isParentCategory, setIsParentCategory] = useState(true);
-  const [selectedParentId, setSelectedParentId] = useState<string>('');
-
   const amountInputRef = useRef<HTMLInputElement>(null);
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   // Get category type to determine transaction type
-  const selectedCategory = getAllCategories(categories).find(cat => cat.id === formData.category);
+  const selectedCategory = categories.find(cat => cat.id === formData.category);
   const transactionType = selectedCategory?.type || 'expense';
 
   // Ngăn body scroll khi modal mở
@@ -146,22 +138,8 @@ export function TransactionModal({
       // Reset category form states
       setSelectedCategoryType(null);
       setSelectedParentCategory(null);
-      setNewCategoryName('');
-      setSelectedIcon('DollarSign');
-      setIsParentCategory(true);
-      setSelectedParentId('');
     }
   }, [transaction, isOpen, wallets]);
-
-  // Reset form when switching to add-category view (only when first entering, not when coming back from parent picker)
-  useEffect(() => {
-    if (currentView === 'add-category' && !selectedParentCategory && !selectedParentId && isParentCategory) {
-      // Only reset if we're truly starting fresh (not coming back from parent picker)
-      if (newCategoryName === '') {
-        setSelectedIcon('DollarSign');
-      }
-    }
-  }, [currentView, selectedParentCategory, selectedParentId, isParentCategory, newCategoryName]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -206,9 +184,6 @@ export function TransactionModal({
       case 'category-parent': return selectedCategoryType === 'expense' ? 'Khoản chi' : 
                                    selectedCategoryType === 'income' ? 'Khoản thu' : 'Vay/Nợ';
       case 'category-child': return selectedParentCategory?.name || 'Chọn danh mục';
-      case 'add-category': return 'Thêm nhóm mới';
-      case 'icon-picker': return 'Chọn biểu tượng';
-      case 'parent-category-picker': return 'Chọn nhóm cha';
       default: return 'Thêm giao dịch';
     }
   };
@@ -240,21 +215,7 @@ export function TransactionModal({
     amountInputRef.current?.blur(); // Prevent system keyboard
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(amount);
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const days = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
-    const months = ['tháng 1', 'tháng 2', 'tháng 3', 'tháng 4', 'tháng 5', 'tháng 6', 
-                   'tháng 7', 'tháng 8', 'tháng 9', 'tháng 10', 'tháng 11', 'tháng 12'];
-    
-    return `${days[date.getDay()]}, ${date.getDate().toString().padStart(2, '0')} ${months[date.getMonth()]} ${date.getFullYear()}`;
-  };
+  // Remove duplicate functions - now using centralized helpers
 
   const renderHeader = () => (
     <div className="sticky top-0 bg-white border-b border-gray-100 p-4 rounded-t-2xl">
@@ -269,7 +230,6 @@ export function TransactionModal({
               if (currentView === 'category-type') setCurrentView('main');
               else if (currentView === 'category-parent') setCurrentView('category-type');
               else if (currentView === 'category-child') setCurrentView('category-parent');
-              else if (currentView === 'add-category') setCurrentView('category-parent');
               else setCurrentView('main');
             }} 
             className="text-gray-500 hover:text-gray-700"
@@ -312,7 +272,7 @@ export function TransactionModal({
                 className="w-12 h-12 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: wallet.color + '20' }}
               >
-                <span className="text-xl">{wallet.icon}</span>
+                <span className="text-xl">{getWalletIcon(wallet.icon)}</span>
               </div>
               <div>
                 <p className="font-medium text-gray-900">{wallet.name}</p>
@@ -404,23 +364,6 @@ export function TransactionModal({
                touchAction: 'pan-y',
                overscrollBehavior: 'contain'
              }}>
-          {/* Nút thêm nhóm mới - chỉ hiển thị cho expense và income */}
-          {selectedCategoryType !== 'loan' && (
-            <div
-              onClick={() => setCurrentView('add-category')}
-              className="flex items-center justify-between p-4 bg-green-50 rounded-xl cursor-pointer hover:bg-green-100 transition-colors duration-200 border-2 border-dashed border-green-300"
-            >
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-green-100">
-                  <span className="text-xl">➕</span>
-                </div>
-                <div>
-                  <p className="font-medium text-green-700">Thêm nhóm mới</p>
-                </div>
-              </div>
-              <ChevronRight size={16} className="text-green-400" />
-            </div>
-          )}
 
           {parentCategories.map((category) => {
             const hasChildren = getChildCategories(category.id, categories).length > 0;
@@ -507,311 +450,7 @@ export function TransactionModal({
     );
   };
 
-  const renderAddCategoryForm = () => {
-    const isEditing = selectedParentCategory && currentView === 'add-category';
-    
-    const availableIcons = [
-      { key: 'DollarSign', icon: '💲', name: 'Tiền' },
-      { key: 'Receipt', icon: '🧾', name: 'Hóa đơn' },
-      { key: 'Home', icon: '🏠', name: 'Nhà' },
-      { key: 'Car', icon: '🚗', name: 'Xe' },
-      { key: 'ShoppingBag', icon: '🛍️', name: 'Mua sắm' },
-      { key: 'UtensilsCrossed', icon: '🍽️', name: 'Ăn uống' },
-      { key: 'Fuel', icon: '⛽', name: 'Xăng' },
-      { key: 'Phone', icon: '📱', name: 'Điện thoại' },
-      { key: 'Zap', icon: '⚡', name: 'Điện' },
-      { key: 'Droplets', icon: '💧', name: 'Nước' },
-      { key: 'Wifi', icon: '📶', name: 'Internet' },
-      { key: 'Tv', icon: '📺', name: 'TV' },
-      { key: 'User', icon: '👤', name: 'Cá nhân' },
-      { key: 'Sparkles', icon: '✨', name: 'Làm đẹp' },
-      { key: 'Coffee', icon: '☕', name: 'Cà phê' },
-      { key: 'Gift', icon: '🎁', name: 'Quà tặng' },
-      { key: 'PiggyBank', icon: '🐷', name: 'Tiết kiệm' },
-      { key: 'TrendingUp', icon: '📈', name: 'Đầu tư' },
-    ];
-
-    const parentCategories = selectedCategoryType ? getParentCategories(selectedCategoryType, categories) : [];
-    
-    const handleSave = () => {
-      if (!newCategoryName.trim()) return;
-      
-      if (isEditing && selectedParentCategory) {
-        // Cập nhật category
-        const iconEmoji = availableIcons.find(i => i.key === selectedIcon)?.icon || selectedIcon;
-        
-        const updatedCategory = {
-          ...selectedParentCategory,
-          name: newCategoryName.trim(),
-          icon: iconEmoji,
-          isParent: isParentCategory,
-          parentId: isParentCategory ? undefined : selectedParentId || undefined
-        };
-        
-        console.log('Cập nhật category:', updatedCategory);
-      } else {
-        // Tạo category mới
-        const iconEmoji = availableIcons.find(i => i.key === selectedIcon)?.icon || selectedIcon;
-        
-        const newCategory: Category = {
-          id: `custom-${Date.now()}`,
-          name: newCategoryName.trim(),
-          type: selectedCategoryType!,
-          icon: iconEmoji,
-          color: selectedCategoryType === 'expense' ? '#ef4444' : 
-                 selectedCategoryType === 'income' ? '#22c55e' : '#8b5cf6',
-          isParent: isParentCategory,
-          parentId: isParentCategory ? undefined : selectedParentId || undefined
-        };
-        
-        if (onAddCategory) {
-          onAddCategory(newCategory);
-        }
-        console.log('Tạo category mới:', newCategory);
-      }
-      
-      // Reset form và quay lại
-      setSelectedParentCategory(null);
-      setNewCategoryName('');
-      setSelectedIcon('DollarSign');
-      setIsParentCategory(true);
-      setSelectedParentId('');
-      setCurrentView('category-parent');
-    };
-    
-    return (
-      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-        <div className="flex-1 overflow-y-auto p-4 space-y-6">
-          
-          {/* Icon và Tên nhóm - nằm ngang */}
-          <div className="flex items-center space-x-3">
-            {/* Chọn Icon */}
-            <button
-              onClick={() => setCurrentView('icon-picker')}
-              className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center border-2 border-red-200 hover:border-red-300 transition-colors"
-            >
-              <span className="text-xl">
-                {availableIcons.find(i => i.key === selectedIcon)?.icon || selectedIcon}
-              </span>
-            </button>
-            
-            {/* Tên nhóm */}
-            <div className="flex-1">
-              <input
-                type="text"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                placeholder="Tên nhóm"
-                className="w-full px-0 py-2 border-0 border-b border-gray-300 focus:border-green-500 focus:ring-0 text-lg bg-transparent"
-                autoFocus
-              />
-            </div>
-          </div>
-
-          {/* Chọn loại - Khoản thu/chi */}
-          <div className="bg-gray-100 rounded-lg p-1 flex">
-            <button
-              onClick={() => setSelectedCategoryType('income')}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                selectedCategoryType === 'income'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Khoản thu
-            </button>
-            <button
-              onClick={() => setSelectedCategoryType('expense')}
-              className={`flex-1 py-2 px-3 rounded-md text-sm font-medium transition-colors ${
-                selectedCategoryType === 'expense'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Khoản chi
-            </button>
-          </div>
-
-          {/* Chọn nhóm cha */}
-          <div>
-            <button
-              onClick={() => setCurrentView('parent-category-picker')}
-              className="w-full flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <span className="text-gray-500">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                  </svg>
-                </span>
-                <div className="text-left">
-                  <p className="text-sm text-gray-500">Nhóm cha</p>
-                  <p className="text-gray-900">
-                    {isParentCategory 
-                      ? 'Không có (Nhóm cha mới)'
-                      : selectedParentId 
-                        ? parentCategories.find(p => p.id === selectedParentId)?.name || 'Chọn nhóm'
-                        : 'Chọn nhóm cha'
-                    }
-                  </p>
-                </div>
-              </div>
-              <ChevronRight className="w-5 h-5 text-gray-400" />
-            </button>
-          </div>
-
-        </div>
-
-        {/* Nút lưu */}
-        <div className="p-4 border-t border-gray-200">
-          <Button 
-            onClick={handleSave}
-            disabled={!newCategoryName.trim() || !selectedCategoryType}
-            className="w-full"
-          >
-            {isEditing 
-              ? 'Cập nhật' 
-              : isParentCategory 
-                ? 'Tạo nhóm cha' 
-                : 'Tạo nhóm con'
-            }
-          </Button>
-        </div>
-      </div>
-    );
-  };
-
-  // Modal chọn icon
-  const renderIconPicker = () => {
-    const availableIcons = [
-      { key: 'DollarSign', icon: '💲', name: 'Tiền' },
-      { key: 'Receipt', icon: '🧾', name: 'Hóa đơn' },
-      { key: 'Home', icon: '🏠', name: 'Nhà' },
-      { key: 'Car', icon: '🚗', name: 'Xe' },
-      { key: 'ShoppingBag', icon: '🛍️', name: 'Mua sắm' },
-      { key: 'UtensilsCrossed', icon: '🍽️', name: 'Ăn uống' },
-      { key: 'Fuel', icon: '⛽', name: 'Xăng' },
-      { key: 'Phone', icon: '📱', name: 'Điện thoại' },
-      { key: 'Zap', icon: '⚡', name: 'Điện' },
-      { key: 'Droplets', icon: '💧', name: 'Nước' },
-      { key: 'Wifi', icon: '📶', name: 'Internet' },
-      { key: 'Tv', icon: '📺', name: 'TV' },
-      { key: 'User', icon: '👤', name: 'Cá nhân' },
-      { key: 'Sparkles', icon: '✨', name: 'Làm đẹp' },
-      { key: 'Coffee', icon: '☕', name: 'Cà phê' },
-      { key: 'Gift', icon: '🎁', name: 'Quà tặng' },
-      { key: 'PiggyBank', icon: '🐷', name: 'Tiết kiệm' },
-      { key: 'TrendingUp', icon: '📈', name: 'Đầu tư' },
-      { key: 'Apple', icon: '🍎', name: 'Thực phẩm' },
-      { key: 'Heart', icon: '❤️', name: 'Yêu thích' },
-      { key: 'Star', icon: '⭐', name: 'Đặc biệt' },
-      { key: 'Shield', icon: '🛡️', name: 'Bảo hiểm' },
-      { key: 'Graduation', icon: '🎓', name: 'Học tập' },
-      { key: 'Hospital', icon: '🏥', name: 'Y tế' },
-      { key: 'Plane', icon: '✈️', name: 'Du lịch' },
-      { key: 'Music', icon: '🎵', name: 'Âm nhạc' },
-      { key: 'Camera', icon: '📷', name: 'Nhiếp ảnh' },
-      { key: 'Gamepad', icon: '🎮', name: 'Game' },
-      { key: 'Book', icon: '📚', name: 'Sách' },
-      { key: 'Shirt', icon: '👕', name: 'Quần áo' },
-      { key: 'Shoe', icon: '👟', name: 'Giày dép' },
-      { key: 'Watch', icon: '⌚', name: 'Đồng hồ' },
-      { key: 'Banknote', icon: '💵', name: 'Tiền mặt' },
-      { key: 'CreditCard', icon: '💳', name: 'Thẻ tín dụng' },
-      { key: 'Wallet', icon: '👛', name: 'Ví' },
-    ];
-
-    return (
-      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="grid grid-cols-6 gap-3">
-            {availableIcons.map((iconItem) => (
-              <button
-                key={iconItem.key}
-                onClick={() => {
-                  setSelectedIcon(iconItem.key);
-                  setCurrentView('add-category');
-                }}
-                className={`p-4 rounded-xl border-2 transition-colors ${
-                  selectedIcon === iconItem.key 
-                    ? 'border-green-500 bg-green-50' 
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <span className="text-2xl">{iconItem.icon}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  // Modal chọn nhóm cha  
-  const renderParentCategoryPicker = () => {
-    const parentCategories = selectedCategoryType ? getParentCategories(selectedCategoryType, categories) : [];
-    
-    return (
-      <div className="h-full flex flex-col animate-in slide-in-from-right duration-300">
-        <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {/* Option không chọn nhóm cha (tạo nhóm cha mới) */}
-          <button
-            onClick={() => {
-              setSelectedParentId('');
-              setIsParentCategory(true);
-              setCurrentView('add-category');
-            }}
-            className={`w-full flex items-center space-x-3 p-4 rounded-xl border-2 transition-colors ${
-              selectedParentId === ''
-                ? 'border-green-500 bg-green-50'
-                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-            }`}
-          >
-            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-              <span className="text-lg">➕</span>
-            </div>
-            <div className="text-left">
-              <p className="font-medium">Tạo nhóm cha mới</p>
-              <p className="text-sm text-gray-500">Không thuộc nhóm nào</p>
-            </div>
-          </button>
-
-          {/* Danh sách nhóm cha hiện có */}
-          {parentCategories.map((parent) => (
-            <button
-              key={parent.id}
-              onClick={() => {
-                setSelectedParentId(parent.id);
-                setIsParentCategory(false);
-                setCurrentView('add-category');
-              }}
-              className={`w-full flex items-center space-x-3 p-4 rounded-xl border-2 transition-colors ${
-                selectedParentId === parent.id
-                  ? 'border-green-500 bg-green-50'
-                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-              }`}
-            >
-              <div 
-                className="w-10 h-10 rounded-full flex items-center justify-center"
-                style={{ backgroundColor: parent.color + '20' }}
-              >
-                <span className="text-lg">{getCategoryIcon(parent.icon)}</span>
-              </div>
-              <div className="text-left">
-                <p className="font-medium">{parent.name}</p>
-                <p className="text-sm text-gray-500">Tạo mục con</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-    );
-  };
-
-  // Helper function to get category icons
-  const getCategoryIcon = (icon: string): string => {
-    return icon || '💰';
-  };
+  // Remove duplicate getCategoryIcon function - now using centralized helper
 
   const renderCategorySelection = () => (
     <div className="h-full flex flex-col animate-in slide-in-from-right duration-300 min-h-0">
@@ -896,7 +535,7 @@ export function TransactionModal({
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-sm">
                   {formData.walletId 
-                    ? wallets.find(w => w.id === formData.walletId)?.icon 
+                    ? getWalletIcon(wallets.find(w => w.id === formData.walletId)?.icon || '') 
                     : '💳'}
                 </span>
               </div>
@@ -927,13 +566,13 @@ export function TransactionModal({
               <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
                 <span className="text-gray-600 text-sm">
                   {formData.category 
-                    ? getCategoryIcon(getAllCategories().find(c => c.id === formData.category)?.icon || '')
+                    ? getCategoryIcon(categories.find(c => c.id === formData.category)?.icon || '')
                     : '≡'}
                 </span>
               </div>
               <span className="text-gray-500">
                 {formData.category 
-                  ? getAllCategories().find(c => c.id === formData.category)?.name 
+                  ? categories.find(c => c.id === formData.category)?.name 
                   : 'Chọn nhóm'}
               </span>
             </div>
@@ -966,7 +605,7 @@ export function TransactionModal({
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors duration-200 pointer-events-none">
               <div className="flex items-center space-x-3">
                 <Calendar size={20} className="text-gray-600" />
-                <span className="text-gray-900">{formatDate(formData.date)}</span>
+                <span className="text-gray-900">{formatVietnameseDate(formData.date)}</span>
               </div>
               <ChevronRight size={16} className="text-gray-400" />
             </div>
@@ -992,9 +631,6 @@ export function TransactionModal({
       case 'category-type': return renderCategoryTypeSelection();
       case 'category-parent': return renderCategoryParentSelection();
       case 'category-child': return renderCategoryChildSelection();
-      case 'add-category': return renderAddCategoryForm();
-      case 'icon-picker': return renderIconPicker();
-      case 'parent-category-picker': return renderParentCategoryPicker();
       default: return renderMainForm();
     }
   };
